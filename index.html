@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Legal AI — Agent juridique québécois</title>
+<script src="https://unpkg.com/docx@8.5.0/build/index.umd.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F7F5F0;--sur:#FFF;--bd:#E4E0D8;--bds:#EDE9E2;
+  --tx:#1C1917;--t2:#78716C;--t3:#A8A29E;
+  --ac:#1C1917;--ac2:#292524;
+  --gn:#15803D;--gnbg:#F0FDF4;--gnbd:#86EFAC;
+  --bl:#1E40AF;--blbg:#EFF6FF;--blbd:#93C5FD;
+  --am:#92400E;--ambg:#FFFBEB;--ambd:#FCD34D;
+  --rd:#991B1B;--rdbg:#FEF2F2;--rdbd:#FECACA;
+  --serif:'DM Serif Display',Georgia,serif;
+  --sans:'DM Sans',system-ui,sans-serif;
+  --r:10px;--rs:6px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--tx);font-size:14px;-webkit-font-smoothing:antialiased}
+.app{display:flex;height:100vh;overflow:hidden}
+
+/* SIDEBAR */
+.sb{width:220px;min-width:220px;background:var(--sur);border-right:1px solid var(--bd);display:flex;flex-direction:column}
+.sb-brand{padding:20px 18px 14px;border-bottom:1px solid var(--bds)}
+.sb-name{font-family:var(--serif);font-size:24px;line-height:1}
+.sb-name em{font-style:italic;color:var(--t2)}
+.sb-tag{font-size:10px;color:var(--t3);margin-top:3px;letter-spacing:.08em;text-transform:uppercase}
+.sb-steps{padding:14px 10px;flex:1}
+.stp{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--rs);margin-bottom:2px}
+.stp.cur{background:var(--bg)}
+.stp-n{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--bd);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--t3);flex-shrink:0;transition:all .2s}
+.stp-n.done{background:var(--gn);border-color:var(--gn);color:#fff}
+.stp-n.act{background:var(--ac);border-color:var(--ac);color:#fff}
+.stp-l{font-size:12px;color:var(--t2)}
+.stp.cur .stp-l{color:var(--tx);font-weight:500}
+.sb-foot{padding:14px 16px;border-top:1px solid var(--bds)}
+.sb-disc{font-size:10px;color:var(--t3);line-height:1.5;margin-top:8px}
+.lang-tog{display:flex;background:var(--bg);border-radius:var(--rs);padding:3px;border:1px solid var(--bd)}
+.lo{flex:1;padding:5px 8px;border-radius:5px;font-size:11px;font-weight:600;text-align:center;cursor:pointer;color:var(--t2);transition:all .15s;border:none;background:none;font-family:var(--sans)}
+.lo.on{background:var(--sur);color:var(--tx);box-shadow:0 1px 3px rgba(0,0,0,.06)}
+
+/* MAIN */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.prog{height:2px;background:var(--bds);flex-shrink:0}
+.prog-fill{height:100%;background:var(--ac);transition:width .4s}
+.panel{display:none;flex:1;flex-direction:column;overflow:hidden}
+.panel.on{display:flex}
+
+/* STEP 1 */
+.s1b{flex:1;overflow-y:auto;padding:28px 32px}
+.s1t{font-family:var(--serif);font-size:26px;margin-bottom:5px}
+.s1s{font-size:13px;color:var(--t2);line-height:1.6;margin-bottom:28px}
+.fg{margin-bottom:24px}
+.fl{font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:9px}
+.fh{font-size:12px;color:var(--t3);line-height:1.55;margin-bottom:8px}
+.ctg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cp{padding:11px 14px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;color:var(--t2);cursor:pointer;background:var(--sur);transition:all .15s;font-family:var(--sans);text-align:left;line-height:1.3}
+.cp:hover{border-color:#C5BFB5;color:var(--tx)}
+.cp.sel{border-color:var(--ac);border-width:2px;color:var(--tx);font-weight:600;background:var(--bg)}
+input[type=text],textarea{width:100%;padding:11px 13px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;font-family:var(--sans);color:var(--tx);background:var(--sur);resize:vertical;outline:none;transition:border-color .15s;line-height:1.5}
+input[type=text]:focus,textarea:focus{border-color:#A09890}
+.s1f{padding:16px 32px;border-top:1px solid var(--bds);display:flex;justify-content:flex-end;background:var(--sur);flex-shrink:0}
+
+/* BUTTONS */
+.btn{padding:10px 22px;border-radius:var(--r);font-size:13px;font-weight:600;cursor:pointer;border:1.5px solid var(--bd);background:var(--sur);color:var(--tx);transition:all .15s;font-family:var(--sans);white-space:nowrap}
+.btn:hover{background:var(--bg)}
+.btn.pri{background:var(--ac);color:#fff;border-color:var(--ac)}
+.btn.pri:hover{background:var(--ac2)}
+.btn.sm{padding:7px 14px;font-size:12px}
+.btn:disabled,.sb2:disabled{opacity:.4;cursor:not-allowed}
+
+/* STEP 2 CHAT */
+.p1-wrap{display:flex;flex:1;overflow:hidden;flex-direction:column}
+.chd{padding:14px 24px;border-bottom:1px solid var(--bds);background:var(--sur);flex-shrink:0}
+.chdn{font-family:var(--serif);font-size:17px}
+.chds{font-size:11px;color:var(--t3);margin-top:2px}
+.p1-body{display:flex;flex:1;overflow:hidden}
+.chat-col{display:flex;flex-direction:column;flex:1;overflow:hidden}
+.cms{flex:1;overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:14px}
+.msg{max-width:82%}
+.msg.bot{align-self:flex-start}
+.msg.user{align-self:flex-end}
+.mn{font-size:10px;color:var(--t3);margin-bottom:4px}
+.mb{padding:12px 15px;border-radius:12px;font-size:13px;line-height:1.65}
+.msg.bot .mb{background:var(--sur);color:var(--tx);border:1px solid var(--bds);border-radius:3px 12px 12px 12px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.msg.user .mb{background:var(--ac);color:#fff;border-radius:12px 3px 12px 12px}
+.cir{padding:14px 24px;border-top:1px solid var(--bds);display:flex;gap:10px;background:var(--sur);flex-shrink:0}
+.ci{flex:1;padding:11px 14px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;font-family:var(--sans);color:var(--tx);background:var(--bg);outline:none;transition:border-color .15s}
+.ci:focus{border-color:#A09890;background:var(--sur)}
+.sb2{padding:11px 16px;background:var(--ac);color:#fff;border:none;border-radius:var(--r);font-size:16px;cursor:pointer}
+.sb2:hover{background:var(--ac2)}
+
+/* PILLS PANEL (shared between step 2 and 3) */
+.pill-panel{width:240px;min-width:240px;border-left:1px solid var(--bds);display:flex;flex-direction:column;background:var(--bg)}
+.pill-hd{padding:14px 16px;border-bottom:1px solid var(--bds);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--t3)}
+.pill-body{padding:12px 14px;flex:1;overflow-y:auto}
+.np{padding:10px 12px;border:1.5px solid var(--blbd);border-radius:999px;background:var(--blbg);cursor:pointer;margin-bottom:8px;font-size:11px;color:var(--bl);line-height:1.4;transition:all .2s;display:flex;align-items:center;gap:8px;box-shadow:0 1px 3px rgba(30,64,175,.08)}
+.np:hover{background:#DBEAFE;transform:translateY(-1px);box-shadow:0 3px 8px rgba(30,64,175,.15);border-color:#60A5FA}
+.np.added{background:var(--gnbg);border-color:var(--gnbd);color:var(--gn);cursor:default;transform:none;box-shadow:none}
+.np-ic{width:18px;height:18px;border-radius:50%;background:rgba(30,64,175,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:12px;font-weight:700;line-height:1}
+.np.added .np-ic{background:rgba(21,128,61,.15)}
+.np-name{font-weight:700;font-size:11px;margin-bottom:1px}
+.np-desc{font-size:10px;opacity:.85;line-height:1.4}
+
+/* STEP 3 DOC */
+.dw{display:flex;flex:1;overflow:hidden}
+.dm{flex:1;overflow-y:auto;padding:36px 44px;background:var(--sur);font-size:13px;line-height:1.9}
+.doc-side{width:240px;min-width:240px;border-left:1px solid var(--bds);display:flex;flex-direction:column;background:var(--bg)}
+.ds-ft{padding:12px 14px;border-top:1px solid var(--bds);display:flex;flex-direction:column;gap:7px;background:var(--sur)}
+
+/* CONFIRM */
+.cfb{margin-top:10px;padding:12px 14px;background:var(--bg);border:1px solid var(--bd);border-radius:var(--r)}
+.cfb2{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.cbtn{padding:8px 16px;border-radius:var(--rs);font-size:12px;font-weight:600;cursor:pointer;border:1.5px solid var(--bd);background:var(--sur);color:var(--tx);font-family:var(--sans);transition:all .15s}
+.cbtn.yes{background:var(--ac);color:#fff;border-color:var(--ac)}
+.err{padding:10px 14px;background:var(--rdbg);border:1px solid var(--rdbd);border-radius:var(--rs);font-size:12px;color:var(--rd);line-height:1.5}
+.dots{display:inline-flex;gap:4px;align-items:center}
+.dots span{width:5px;height:5px;border-radius:50%;background:var(--t3);animation:bn 1.3s infinite}
+.dots span:nth-child(2){animation-delay:.18s}
+.dots span:nth-child(3){animation-delay:.36s}
+@keyframes bn{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-5px)}}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-thumb{background:var(--bd);border-radius:2px}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <div class="sb">
+    <div class="sb-brand">
+      <div class="sb-name">Legal<em>AI</em></div>
+      <div class="sb-tag" id="sb-tag">Agent juridique · Québec</div>
+    </div>
+    <div class="sb-steps" id="sb-steps"></div>
+    <div class="sb-foot">
+      <div class="lang-tog">
+        <button class="lo on" id="opt-fr" onclick="setLang('fr')">Français</button>
+        <button class="lo" id="opt-en" onclick="setLang('en')">English</button>
+      </div>
+      <div class="sb-disc" id="sb-disc">Agent structuré · non un avocat</div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="prog"><div class="prog-fill" id="prog" style="width:33%"></div></div>
+
+    <!-- PANEL 0 — CONFIG -->
+    <div class="panel on" id="p0">
+      <div class="s1b">
+        <div class="s1t" id="t-title">Votre contrat</div>
+        <div class="s1s" id="t-sub">Dites-nous ce dont vous avez besoin. L'agent s'adapte à votre situation et secteur.</div>
+        <div class="fg">
+          <div class="fl" id="t-lct">Type de contrat</div>
+          <div class="ctg" id="ct-grid"></div>
+        </div>
+        <div class="fg">
+          <div class="fl" id="t-lind">Votre domaine ou secteur</div>
+          <input type="text" id="inp-ind" />
+        </div>
+        <div class="fg">
+          <div class="fl" id="t-ldet">Parlez-nous de votre situation</div>
+          <div class="fh" id="t-hint"></div>
+          <textarea id="inp-det" rows="3"></textarea>
+        </div>
+      </div>
+      <div class="s1f">
+        <button class="btn pri" id="btn-start" onclick="startIntake()">Démarrer →</button>
+      </div>
+    </div>
+
+    <!-- PANEL 1 — CHAT -->
+    <div class="panel" id="p1">
+      <div class="p1-wrap">
+        <div class="chd">
+          <div class="chdn" id="chat-name">—</div>
+          <div class="chds" id="t-chat-sub">Agent juridique IA · collecte structurée</div>
+        </div>
+        <div class="p1-body">
+          <div class="chat-col">
+            <div class="cms" id="chat-msgs"></div>
+            <div class="cir">
+              <input class="ci" id="chat-inp" onkeydown="if(event.key==='Enter')handleSend()" />
+              <button class="sb2" id="send-btn" onclick="handleSend()">↑</button>
+            </div>
+          </div>
+          <div class="pill-panel">
+            <div class="pill-hd" id="t-pill-hd">Clauses suggérées</div>
+            <div class="pill-body" id="nudge-chat"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PANEL 2 — DOC -->
+    <div class="panel" id="p2">
+      <div class="dw">
+        <div class="dm" id="doc-main"></div>
+        <div class="doc-side">
+          <div class="pill-hd" id="t-pill-hd2">Clauses suggérées</div>
+          <div class="pill-body" id="nudge-doc"></div>
+          <div class="ds-ft">
+            <button class="btn sm" id="btn-tr" onclick="doTranslate()">Traduire en anglais</button>
+            <button class="btn sm pri" id="btn-export" onclick="doExport()">Exporter .docx</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── STATE ──────────────────────────────────────
+var L = 'fr', step = 0, selC = '', chatHistory = [], addedNudges = {}, busy = false;
+
+// ── DATA ───────────────────────────────────────
+var CTS = [
+  {fr:'Contrat de travail',        en:'Employment contract',      k:'employment'},
+  {fr:'Entrepreneur indépendant',  en:'Independent contractor',   k:'contractor'},
+  {fr:'NDA',                       en:'NDA',                      k:'nda'},
+  {fr:'Politique de confidentialité', en:'Privacy policy',        k:'privacy'},
+  {fr:'Non-concurrence / Non-sollicitation', en:'Non-compete / Non-solicit', k:'noncompete'},
+  {fr:"Lettre d'intention",        en:'Letter of intent',         k:'loi'},
+  {fr:'Conditions générales',      en:'Terms & conditions',       k:'tnc'},
+  {fr:'Contrat de services',       en:'Service agreement',        k:'service'}
+];
+
+var CL = {
+  usage_rights:    {fr:"Droits d'utilisation",              en:"Usage rights",               df:"Limite l'usage du contenu aux fins convenues uniquement.",                      de:"Limits content use to agreed purposes only.",                         t:['influenc','tiktok','content','créateur','creator','ugc','brand','marque','vidéo','video','photo','publicité','advertising','instagram','youtube','social','linkedin']},
+  whitelisting:    {fr:"Droits de diffusion (whitelisting)",en:"Whitelisting rights",         df:"Encadre la diffusion payante via le compte du créateur.",                       de:"Governs paid promotion through the creator's account.",                t:['influenc','tiktok','instagram','youtube','content','creator','ugc','brand','pub payante','paid ad','whitelist','linkedin']},
+  likeness_rights: {fr:"Droits à l'image",                  en:"Likeness rights",             df:"Limite l'utilisation de l'image et du nom aux supports convenus.",              de:"Limits use of image and name to expressly agreed media.",              t:['influenc','tiktok','creator','ugc','photo','vidéo','video','model','image']},
+  exclusivity:     {fr:"Exclusivité sectorielle",            en:"Category exclusivity",        df:"Interdit la collaboration avec des marques concurrentes pendant la période.",    de:"Prohibits working with competing brands during the agreed period.",    t:['influenc','content','creator','brand','marque','ugc','exclusiv']},
+  content_approval:{fr:"Approbation du contenu",            en:"Content approval process",    df:"Définit les rondes de révision et délais avant publication.",                   de:"Defines revision rounds and approval deadlines before publishing.",    t:['influenc','content','creator','ugc','brand','marque','agence','design','vidéo','video','linkedin']},
+  ip_assignment:   {fr:"Cession de propriété intellectuelle",en:"IP assignment",              df:"Transfère tous les livrables en pleine propriété au client après paiement.",    de:"Transfers all deliverables to client upon full payment.",              t:['tech','développeur','developer','logiciel','software','design','agence','agency','consultant','app','saas']},
+  source_code:     {fr:"Propriété du code source",           en:"Source code ownership",       df:"Le code source reste la propriété exclusive du client après livraison.",         de:"Source code remains client's exclusive property after delivery.",      t:['tech','développeur','developer','logiciel','software','saas','app','programmeur','code']},
+  session_cancel:  {fr:"Politique d'annulation de séance",   en:"Session cancellation policy", df:"Définit les frais d'annulation selon le délai de préavis.",                    de:"Defines cancellation fees based on notice period given.",              t:['tuteur','tutor','coach','formateur','trainer','mentor','cours','lesson','class','enseignant','prof','séance']},
+  materials_ip:    {fr:"Propriété des supports créés",       en:"Educational materials IP",    df:"Les matériaux pédagogiques restent la propriété du prestataire.",               de:"Educational materials remain the provider's intellectual property.",   t:['tuteur','tutor','coach','formateur','trainer','cours','lesson','formation','enseignant','prof']},
+  no_employee:     {fr:"Absence de lien de subordination",   en:"No employment relationship",  df:"Confirme qu'aucun lien d'emploi n'est créé par ce contrat.",                   de:"Confirms no employment relationship is created by this contract.",    t:['contractor','indépendant','freelance','consultant','tuteur','tutor','coach','pigiste']},
+  data_breach:     {fr:"Notification de violation de données",en:"Data breach notification",   df:"Oblige à notifier les autorités dans les 72h en cas de fuite.",                de:"Requires notifying authorities within 72h of a data breach.",          t:['privacy','données','data','rgpd','gdpr','loi 25','pipeda','tech','saas','app','numérique']},
+  right_erasure:   {fr:"Droit à l'effacement",               en:"Right to erasure",            df:"Les utilisateurs peuvent demander la suppression de leurs données.",            de:"Users can request deletion of their personal data.",                   t:['privacy','données','data','rgpd','gdpr','loi 25','consommateur']},
+  change_orders:   {fr:"Gestion des avenants",               en:"Change order management",     df:"Toute modification de portée doit être approuvée par écrit.",                   de:"Any scope change requires a written amendment by both parties.",       t:['service','agence','agency','construction','rénovation','consultant','design','projet']},
+  liability_cap:   {fr:"Plafond de responsabilité",          en:"Liability cap",               df:"Limite la responsabilité totale au montant des honoraires reçus.",              de:"Caps total liability to fees received under this contract.",           t:['service','agence','agency','consultant','tech','saas','développeur','contractor']},
+  force_majeure:   {fr:"Force majeure",                      en:"Force majeure",               df:"Exclut la responsabilité en cas d'événement imprévisible et irrésistible.",     de:"Excludes liability for unforeseeable and unavoidable events.",         t:['employment','service','contractor','tnc','loi','construction','international']},
+  non_solicit:     {fr:"Non-sollicitation de la clientèle",  en:"Non-solicitation of clients", df:"Interdit le démarchage des clients de l'autre partie après le contrat.",        de:"Prohibits soliciting the other party's clients after contract ends.",  t:['service','agence','consultant','contractor','indépendant','freelance']}
+};
+
+var QC = {
+  employment: {law:'Code civil du Québec, RLRQ c CCQ-1991', labour:'Loi sur les normes du travail, RLRQ c N-1.1', jur:'Province de Québec'},
+  contractor:  {law:'Code civil du Québec, RLRQ c CCQ-1991', jur:'Province de Québec', note_fr:'Entrepreneur indépendant — aucun lien de subordination (art. 2085 C.c.Q.)', note_en:'Independent contractor — no employment relationship (art. 2085 C.c.Q.)'},
+  nda:         {law:'Code civil du Québec, RLRQ c CCQ-1991', jur:'Province de Québec'},
+  privacy:     {law:'Loi 25, RLRQ c P-39.1', pipeda:'LPRPDE, LC 2000, c 5', jur:'Province de Québec'},
+  noncompete:  {law:'Code civil du Québec, RLRQ c CCQ-1991', jur:'Province de Québec', note_fr:'Durée recommandée : max 12 mois (art. 2089 C.c.Q.)', note_en:'Recommended duration: max 12 months (art. 2089 C.c.Q.)'},
+  loi:         {law:'Code civil du Québec, RLRQ c CCQ-1991', jur:'Province de Québec', note_fr:'Ce document ne constitue pas un engagement ferme.', note_en:'This document does not constitute a binding commitment.'},
+  tnc:         {law:'Code civil du Québec, RLRQ c CCQ-1991', consumer:'Loi sur la protection du consommateur, RLRQ c P-40.1', jur:'Province de Québec'},
+  service:     {law:'Code civil du Québec, RLRQ c CCQ-1991', jur:'Province de Québec'}
+};
+
+// ── SYSTEM PROMPT ──────────────────────────────
+function buildSys() {
+  var cObj = CTS.find(function(c){return c.k===selC;});
+  var cName = cObj ? cObj.fr : selC;
+  var ind = document.getElementById('inp-ind').value || 'non précisé';
+  var det = document.getElementById('inp-det').value || 'aucun';
+  var qc = QC[selC] || QC.service;
+  var rl = L==='fr' ? 'French' : 'English';
+  var deflect = L==='fr' ? 'Cette question dépasse mon rôle. Consultez un avocat qualifié.' : 'That question is outside my scope. Please consult a qualified lawyer.';
+  return [
+    'You are a structured legal document intake system for Quebec business contracts.',
+    'You are a FORM ENGINE — NOT a legal advisor.',
+    'LANGUAGE: Respond entirely in ' + rl + '.',
+    '',
+    'RULES:',
+    '1. Ask EXACTLY ONE question per message. Never combine two questions.',
+    '2. Keep responses under 3 sentences.',
+    '3. Acknowledge answer in ONE sentence then ask next question.',
+    '4. NEVER invent or cite legal statutes not provided here.',
+    '5. NEVER give legal opinions. If asked: "' + deflect + '"',
+    '6. NEVER generate a contract draft.',
+    '7. NEVER use markdown formatting (**bold**, *italic*, etc). Plain text only.',
+    '8. Do NOT list clause suggestions in chat — handled visually by the system.',
+    '9. When all questions answered, output exactly: INTAKE_COMPLETE',
+    '',
+    'INDUSTRY SIGNAL DETECTION — adapt questions accordingly:',
+    '- Creator/influencer (tiktok, ugc, content, instagram, youtube, linkedin, brand): ask about number of deliverables, content approval rounds, whitelisting permission, brand exclusivity, usage duration and territory.',
+    '- Tech/developer (software, saas, app, dev, logiciel): ask about source code ownership, API rights, bug warranty period.',
+    '- Education/coaching (tutor, coach, trainer, teacher, cours, séance): ask about session cancellation policy, materials ownership, online vs in-person.',
+    '- Music/artist (music, artist, label, sync, artiste): ask about master rights, royalties, credits.',
+    '- Construction: ask about warranty period, defect liability, material specifications.',
+    '- Agency/consultant (agence, consultant): ask about deliverable acceptance, change orders, IP on work product.',
+    '',
+    'WORKFLOW:',
+    'STAGE 1: ONE sentence confirming contract type, Quebec jurisdiction, and detected industry context.',
+    'STAGE 2: Collect ONE question at a time: names/roles of all parties, purpose/scope, duration/timeline, compensation/payment terms, confidentiality requirements, IP ownership (adapt to industry signals), termination and notice period, dispute resolution preference, then any industry-specific questions based on detected signals.',
+    'STAGE 3: Output exactly: INTAKE_COMPLETE',
+    '',
+    'CONTRACT: ' + cName,
+    'INDUSTRY: ' + ind,
+    'DETAILS: ' + det,
+    'QC DEFAULTS: ' + JSON.stringify(qc)
+  ].join('\n');
+}
+
+// ── RENDER NAV ─────────────────────────────────
+function renderNav() {
+  var labs = L==='fr'
+    ? ['Paramètres','Collecte & analyse','Révision & export']
+    : ['Parameters','Intake & analysis','Review & export'];
+  var el = document.getElementById('sb-steps');
+  el.innerHTML = '';
+  labs.forEach(function(s, i) {
+    var r = document.createElement('div'); r.className = 'stp' + (i===step?' cur':'');
+    var n = document.createElement('div'); n.className = 'stp-n' + (i<step?' done':i===step?' act':'');
+    n.textContent = i < step ? '✓' : (i+1);
+    var l = document.createElement('div'); l.className = 'stp-l'; l.textContent = s;
+    r.appendChild(n); r.appendChild(l); el.appendChild(r);
+  });
+  document.getElementById('prog').style.width = [33,66,100][step] + '%';
+}
+
+// ── RENDER CONTRACT TYPES ──────────────────────
+function renderCT() {
+  var g = document.getElementById('ct-grid');
+  g.innerHTML = '';
+  CTS.forEach(function(c) {
+    var d = document.createElement('button');
+    d.className = 'cp' + (selC===c.k ? ' sel' : '');
+    d.textContent = L==='fr' ? c.fr : c.en;
+    d.onclick = (function(k){ return function(){ selC=k; renderCT(); }; })(c.k);
+    g.appendChild(d);
+  });
+}
+
+// ── APPLY LANGUAGE ─────────────────────────────
+function applyLang() {
+  var fr = L === 'fr';
+  document.getElementById('opt-fr').classList.toggle('on', fr);
+  document.getElementById('opt-en').classList.toggle('on', !fr);
+  document.getElementById('sb-tag').textContent = fr ? 'Agent juridique · Québec' : 'Legal Agent · Quebec';
+  document.getElementById('sb-disc').textContent = fr ? 'Agent structuré · non un avocat' : 'Structured agent · not a lawyer';
+  document.getElementById('t-title').textContent = fr ? 'Votre contrat' : 'Your contract';
+  document.getElementById('t-sub').textContent = fr ? "Dites-nous ce dont vous avez besoin. L'agent s'adapte à votre situation et secteur." : "Tell us what you need. The agent adapts to your situation and industry.";
+  document.getElementById('t-lct').textContent = fr ? 'Type de contrat' : 'Contract type';
+  document.getElementById('t-lind').textContent = fr ? 'Votre domaine ou secteur' : 'Your field or industry';
+  document.getElementById('t-ldet').textContent = fr ? 'Parlez-nous de votre situation' : 'Tell us about your situation';
+  document.getElementById('t-hint').textContent = fr ? "Êtes-vous une entreprise ou un particulier? Avez-vous déjà une relation avec l'autre partie? Des éléments importants?" : "Are you a business or individual? Do you already have a relationship with the other party? Any important details?";
+  document.getElementById('inp-ind').placeholder = fr ? "Ex. : créateur TikTok, consultant tech, tuteur de maths..." : "E.g. TikTok creator, tech consultant, math tutor...";
+  document.getElementById('inp-det').placeholder = fr ? "Ex. : je travaille avec une marque pour 3 publications sponsorisées par mois..." : "E.g. I work with a brand for 3 sponsored posts per month...";
+  document.getElementById('btn-start').textContent = fr ? 'Démarrer →' : 'Start →';
+  document.getElementById('t-chat-sub').textContent = fr ? 'Agent juridique IA · collecte structurée' : 'AI Legal Agent · structured intake';
+  document.getElementById('t-pill-hd').textContent = fr ? 'Clauses suggérées' : 'Suggested clauses';
+  document.getElementById('t-pill-hd2').textContent = fr ? 'Clauses suggérées' : 'Suggested clauses';
+  document.getElementById('btn-tr').textContent = fr ? 'Traduire en anglais' : 'Translate to French';
+  document.getElementById('btn-export').textContent = fr ? 'Exporter .docx' : 'Export .docx';
+  document.getElementById('chat-inp').placeholder = fr ? 'Votre réponse...' : 'Your reply...';
+  renderCT();
+  renderNav();
+}
+
+function setLang(l) { L = l; applyLang(); }
+
+function goPanel(n) {
+  step = n;
+  ['p0','p1','p2'].forEach(function(id,i){ document.getElementById(id).classList.toggle('on', i===n); });
+  renderNav();
+}
+
+// ── CHAT ───────────────────────────────────────
+function addMsg(role, html) {
+  var ca = document.getElementById('chat-msgs');
+  var m = document.createElement('div'); m.className = 'msg ' + role;
+  if (role==='bot') { var nm=document.createElement('div'); nm.className='mn'; nm.textContent=L==='fr'?'Agent juridique':'Legal Agent'; m.appendChild(nm); }
+  var b = document.createElement('div'); b.className = 'mb'; b.innerHTML = html;
+  m.appendChild(b); ca.appendChild(m); ca.scrollTop = ca.scrollHeight;
+}
+
+function showTyping() {
+  var ca = document.getElementById('chat-msgs'); removeTyping();
+  var m = document.createElement('div'); m.className='msg bot'; m.id='typ';
+  var nm = document.createElement('div'); nm.className='mn'; nm.textContent=L==='fr'?'Agent juridique':'Legal Agent';
+  var b = document.createElement('div'); b.className='mb'; b.innerHTML='<div class="dots"><span></span><span></span><span></span></div>';
+  m.appendChild(nm); m.appendChild(b); ca.appendChild(m); ca.scrollTop=ca.scrollHeight;
+}
+function removeTyping() { var t=document.getElementById('typ'); if(t)t.remove(); }
+function setBusy(v) { busy=v; document.getElementById('send-btn').disabled=v; document.getElementById('chat-inp').disabled=v; }
+
+async function callAPI(userText) {
+  if (busy) return;
+  setBusy(true); chatHistory.push({role:'user',content:userText}); showTyping();
+  try {
+    var res = await fetch('/api/chat', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({model:'claude-opus-4-5', max_tokens:1000, system:buildSys(), messages:chatHistory})
+    });
+    var data = await res.json(); removeTyping();
+    if (data.error) { addMsg('bot','<div class="err">⚠ '+data.error.message+'</div>'); chatHistory.pop(); setBusy(false); return; }
+    var txt = data.content&&data.content[0] ? data.content[0].text : '';
+    chatHistory.push({role:'assistant', content:txt});
+    if (txt.includes('INTAKE_COMPLETE')) {
+      setTimeout(showConfirm, 300);
+    } else {
+      addMsg('bot', txt.replace(/\n/g,'<br>'));
+    }
+  } catch(e) {
+    removeTyping(); addMsg('bot','<div class="err">⚠ '+e.message+'</div>'); chatHistory.pop();
+  }
+  setBusy(false); renderNudges(); document.getElementById('chat-inp').focus();
+}
+
+function showConfirm() {
+  var fr = L==='fr';
+  addMsg('bot',
+    (fr?'Toutes les informations ont été collectées. Confirmez-vous que vos réponses sont exactes?':'All information collected. Do you confirm your answers are accurate?')
+    +'<div class="cfb"><div class="cfb2">'
+    +'<button class="cbtn yes" onclick="doGenerate()">'+(fr?'Oui, générer le contrat':'Yes, generate contract')+'</button>'
+    +'<button class="cbtn" onclick="doCorrect()">'+(fr?'Corriger une réponse':'Correct an answer')+'</button>'
+    +'</div></div>');
+}
+function doCorrect() { addMsg('bot', L==='fr'?'Bien sûr. Quelle information souhaitez-vous corriger?':'Of course. Which answer would you like to correct?'); document.getElementById('chat-inp').focus(); }
+function doGenerate() { addMsg('bot', L==='fr'?'Parfait. Génération du document en cours...':'Perfect. Generating your document...'); setTimeout(buildDoc, 700); }
+
+function startIntake() {
+  if (!selC) { alert(L==='fr'?'Veuillez sélectionner un type de contrat.':'Please select a contract type.'); return; }
+  var cObj = CTS.find(function(c){return c.k===selC;});
+  document.getElementById('chat-name').textContent = cObj ? (L==='fr'?cObj.fr:cObj.en) : selC;
+  goPanel(1); chatHistory = []; addedNudges = {}; renderNudges();
+  var cName = cObj ? (L==='fr'?cObj.fr:cObj.en) : selC;
+  callAPI(L==='fr'
+    ? 'Bonjour. Je veux créer un '+cName+'. Mon domaine : '+(document.getElementById('inp-ind').value||'non précisé')+'. Contexte : '+(document.getElementById('inp-det').value||'aucun')+'. Juridiction : Québec.'
+    : 'Hello. I want to create a '+cName+'. My field: '+(document.getElementById('inp-ind').value||'not specified')+'. Context: '+(document.getElementById('inp-det').value||'none')+'. Jurisdiction: Quebec.');
+}
+
+function handleSend() {
+  var ci = document.getElementById('chat-inp');
+  var v = ci.value.trim(); if (!v||busy) return;
+  addMsg('user', v); ci.value=''; callAPI(v);
+}
+
+// ── NUDGE PILLS ────────────────────────────────
+function detectNudges() {
+  var ctx = (document.getElementById('inp-ind').value+' '+document.getElementById('inp-det').value).toLowerCase();
+  return Object.keys(CL).filter(function(k){ return !addedNudges[k] && CL[k].t.some(function(t){return ctx.includes(t);}); }).slice(0,7);
+}
+
+function renderNudges() {
+  var found = detectNudges();
+  ['nudge-chat','nudge-doc'].forEach(function(id){
+    var nl = document.getElementById(id); if (!nl) return;
+    nl.innerHTML = '';
+    if (!found.length) {
+      nl.innerHTML = '<p style="font-size:11px;color:var(--t3);line-height:1.5;padding:4px">'+(L==='fr'?'Toutes les clauses suggérées ont été ajoutées.':'All suggested clauses added.')+'</p>';
+      return;
+    }
+    found.forEach(function(k){
+      var cl = CL[k]; var d = document.createElement('div'); d.className='np';
+      d.innerHTML = '<div class="np-ic">+</div><div><div class="np-name">'+(L==='fr'?cl.fr:cl.en)+'</div><div class="np-desc">'+(L==='fr'?cl.df:cl.de)+'</div></div>';
+      d.onclick = (function(key){ return function(){ addClause(key); }; })(k);
+      nl.appendChild(d);
+    });
+  });
+}
+
+function addClause(k) {
+  addedNudges[k] = true;
+  var cl = CL[k]; var name=L==='fr'?cl.fr:cl.en; var desc=L==='fr'?cl.df:cl.de;
+  var dm = document.getElementById('doc-main'); var disc=dm.querySelector('.doc-disc');
+  var html = '<div style="border-left:2px solid var(--gn);padding-left:14px;margin:12px 0"><p style="font-size:12px;font-weight:700;margin-bottom:4px;color:var(--gn)">✓ '+name+'</p><p style="font-size:13px;color:var(--t2)">'+desc+'</p></div>';
+  if (disc) disc.insertAdjacentHTML('beforebegin',html); else dm.innerHTML+=html;
+  renderNudges();
+}
+
+// ── DOC BUILD ──────────────────────────────────
+function buildDoc() {
+  var cObj = CTS.find(function(c){return c.k===selC;});
+  var cName = cObj ? (L==='fr'?cObj.fr:cObj.en) : selC;
+  var qc = QC[selC]||QC.service; var det=document.getElementById('inp-det').value; var fr=L==='fr';
+  var qcNote = fr ? (qc.note_fr||'') : (qc.note_en||'');
+  var qaHtml = '';
+  for (var i=0;i<chatHistory.length;i++) {
+    var msg=chatHistory[i];
+    if (msg.role==='user'&&i>0) {
+      var prev=chatHistory[i-1];
+      var q=prev&&prev.role==='assistant'?prev.content.replace(/<[^>]+>/g,'').split('\n')[0].substring(0,140):'';
+      qaHtml+='<div style="margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--bds)">'+(q?'<div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">'+q+'</div>':'')+'<div>'+msg.content+'</div></div>';
+    }
+  }
+  var html='';
+  html+='<p style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:18px">'+cName.toUpperCase()+' · '+(fr?'PROJET':'DRAFT')+' · '+new Date().toLocaleDateString(fr?'fr-CA':'en-CA')+'</p>';
+  html+='<p style="font-family:var(--serif);font-size:22px;margin-bottom:6px">'+cName+'</p>';
+  html+='<p style="font-size:11px;color:var(--t3);margin-bottom:22px">'+qc.jur+' · '+qc.law+'</p>';
+  html+='<hr style="border:none;border-top:1px solid var(--bds);margin:16px 0">';
+  if (det) { html+='<p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--t3);margin-bottom:8px">'+(fr?'Contexte fourni':'Provided context')+'</p><p style="margin-bottom:16px"><span style="background:#FEF3C7;border-radius:3px;padding:2px 5px;color:var(--am);font-weight:500">'+det+'</span></p><hr style="border:none;border-top:1px solid var(--bds);margin:16px 0">'; }
+  html+='<p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--t3);margin-bottom:12px">1. '+(fr?'Informations collectées':'Collected information')+'</p>';
+  html+=qaHtml||'<p style="color:var(--t3)">—</p>';
+  html+='<hr style="border:none;border-top:1px solid var(--bds);margin:16px 0">';
+  html+='<p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--t3);margin-bottom:12px">2. '+(fr?'Juridiction & droit applicable':'Jurisdiction & governing law')+'</p>';
+  html+='<p style="margin-bottom:5px">'+qc.jur+'</p><p style="margin-bottom:5px">'+qc.law+'</p>';
+  if(qc.labour)html+='<p style="margin-bottom:5px">'+qc.labour+'</p>';
+  if(qc.pipeda)html+='<p style="margin-bottom:5px">'+qc.pipeda+'</p>';
+  if(qc.consumer)html+='<p style="margin-bottom:5px">'+qc.consumer+'</p>';
+  if(qcNote)html+='<p style="padding:10px 14px;background:var(--ambg);border:1px solid var(--ambd);border-radius:var(--rs);font-size:12px;color:var(--am);margin-top:8px">⚠ '+qcNote+'</p>';
+  html+='<hr style="border:none;border-top:1px solid var(--bds);margin:16px 0">';
+  html+='<p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--t3);margin-bottom:12px">3. '+(fr?'Clauses principales':'Main clauses')+'</p>';
+  html+='<p style="font-size:13px;color:var(--t3);font-style:italic;margin-bottom:8px">→ '+(fr?'Cliquez sur les clauses suggérées à droite pour les ajouter':'Click suggested clauses on the right to add them')+'</p>';
+  html+='<hr style="border:none;border-top:1px solid var(--bds);margin:16px 0">';
+  html+='<p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--t3);margin-bottom:16px">4. '+(fr?'Signatures':'Signatures')+'</p>';
+  html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:28px"><div><p style="font-size:11px;color:var(--t3)">'+(fr?'Partie 1':'Party 1')+'</p><div style="margin-top:36px;border-top:1px solid var(--bd);padding-top:6px;font-size:11px;color:var(--t3)">'+(fr?'Signature & date':'Signature & date')+'</div></div><div><p style="font-size:11px;color:var(--t3)">'+(fr?'Partie 2':'Party 2')+'</p><div style="margin-top:36px;border-top:1px solid var(--bd);padding-top:6px;font-size:11px;color:var(--t3)">'+(fr?'Signature & date':'Signature & date')+'</div></div></div>';
+  html+='<div class="doc-disc" style="margin-top:28px;padding:14px 16px;background:var(--ambg);border:1px solid var(--ambd);border-radius:var(--r);font-size:11px;color:var(--am);line-height:1.6">⚠ '+(fr?'Ce document est un projet structuré généré par IA. Il ne constitue pas un avis juridique. Faites-le réviser par un avocat qualifié avant toute signature.':'This document is a structured AI-generated draft. It does not constitute legal advice. Have it reviewed by a qualified lawyer before signing.')+'</div>';
+  document.getElementById('doc-main').innerHTML = html;
+  renderNudges(); goPanel(2);
+}
+
+function doTranslate() { L=L==='fr'?'en':'fr'; applyLang(); buildDoc(); }
+
+// ── WORD EXPORT ────────────────────────────────
+function doExport() {
+  if (typeof docx==='undefined') { alert(L==='fr'?'Bibliothèque Word non chargée. Rechargez la page.':'Word library not loaded. Please reload the page.'); return; }
+  var fr=L==='fr'; var cObj=CTS.find(function(c){return c.k===selC;}); var cName=cObj?(fr?cObj.fr:cObj.en):selC;
+  var qc=QC[selC]||QC.service; var det=document.getElementById('inp-det').value; var qcNote=fr?(qc.note_fr||''):(qc.note_en||'');
+  var D=docx; var children=[];
+  children.push(new D.Paragraph({children:[new D.TextRun({text:(fr?'PROJET · ':'DRAFT · ')+new Date().toLocaleDateString(fr?'fr-CA':'en-CA'),size:18,color:'999999',font:'Arial'})],spacing:{after:100}}));
+  children.push(new D.Paragraph({children:[new D.TextRun({text:cName.toUpperCase(),size:36,bold:true,font:'Arial'})],spacing:{after:120}}));
+  children.push(new D.Paragraph({children:[new D.TextRun({text:qc.jur+' · '+qc.law,size:20,color:'999999',font:'Arial',italics:true})],spacing:{after:300},border:{bottom:{style:D.BorderStyle.SINGLE,size:1,color:'E4E0D8',space:1}}}));
+  if(det){children.push(new D.Paragraph({children:[new D.TextRun({text:fr?'CONTEXTE FOURNI':'PROVIDED CONTEXT',size:18,bold:true,font:'Arial',color:'999999'})],spacing:{before:280,after:100}}));children.push(new D.Paragraph({children:[new D.TextRun({text:det,size:22,font:'Arial'})],spacing:{after:280},border:{bottom:{style:D.BorderStyle.SINGLE,size:1,color:'E4E0D8',space:1}}}));}
+  children.push(new D.Paragraph({children:[new D.TextRun({text:'1. '+(fr?'INFORMATIONS COLLECTÉES':'COLLECTED INFORMATION'),size:18,bold:true,font:'Arial',color:'999999'})],spacing:{before:280,after:140}}));
+  for(var i=0;i<chatHistory.length;i++){var msg=chatHistory[i];if(msg.role==='user'&&i>0){var prev=chatHistory[i-1];var q=prev&&prev.role==='assistant'?prev.content.replace(/<[^>]+>/g,'').split('\n')[0].substring(0,140):'';if(q)children.push(new D.Paragraph({children:[new D.TextRun({text:q,size:18,font:'Arial',color:'A8A29E',italics:true})],spacing:{before:140,after:40}}));children.push(new D.Paragraph({children:[new D.TextRun({text:msg.content,size:22,font:'Arial'})],spacing:{after:120},indent:{left:200}}));}}
+  children.push(new D.Paragraph({children:[new D.TextRun({text:'2. '+(fr?'JURIDICTION & DROIT APPLICABLE':'JURISDICTION & GOVERNING LAW'),size:18,bold:true,font:'Arial',color:'999999'})],spacing:{before:280,after:140},border:{top:{style:D.BorderStyle.SINGLE,size:1,color:'E4E0D8',space:1}}}));
+  children.push(new D.Paragraph({children:[new D.TextRun({text:qc.jur,size:22,font:'Arial'})],spacing:{after:80}}));
+  children.push(new D.Paragraph({children:[new D.TextRun({text:qc.law,size:22,font:'Arial'})],spacing:{after:80}}));
+  if(qc.labour)children.push(new D.Paragraph({children:[new D.TextRun({text:qc.labour,size:22,font:'Arial'})],spacing:{after:80}}));
+  if(qc.pipeda)children.push(new D.Paragraph({children:[new D.TextRun({text:qc.pipeda,size:22,font:'Arial'})],spacing:{after:80}}));
+  if(qc.consumer)children.push(new D.Paragraph({children:[new D.TextRun({text:qc.consumer,size:22,font:'Arial'})],spacing:{after:80}}));
+  if(qcNote)children.push(new D.Paragraph({children:[new D.TextRun({text:'⚠ '+qcNote,size:20,bold:true,font:'Arial',color:'92400E'})],spacing:{after:100}}));
+  var addedKeys=Object.keys(addedNudges);
+  if(addedKeys.length>0){children.push(new D.Paragraph({children:[new D.TextRun({text:'3. '+(fr?'CLAUSES PRINCIPALES':'MAIN CLAUSES'),size:18,bold:true,font:'Arial',color:'999999'})],spacing:{before:280,after:140},border:{top:{style:D.BorderStyle.SINGLE,size:1,color:'E4E0D8',space:1}}}));addedKeys.forEach(function(k){var cl=CL[k];if(!cl)return;children.push(new D.Paragraph({children:[new D.TextRun({text:'✓ '+(fr?cl.fr:cl.en),size:22,bold:true,font:'Arial',color:'15803D'})],spacing:{before:180,after:60},border:{left:{style:D.BorderStyle.SINGLE,size:8,color:'15803D',space:4}}}));children.push(new D.Paragraph({children:[new D.TextRun({text:fr?cl.df:cl.de,size:22,font:'Arial',color:'555555'})],spacing:{after:80},indent:{left:200}}));});}
+  children.push(new D.Paragraph({children:[new D.TextRun({text:'4. '+(fr?'SIGNATURES':'SIGNATURES'),size:18,bold:true,font:'Arial',color:'999999'})],spacing:{before:280,after:400},border:{top:{style:D.BorderStyle.SINGLE,size:1,color:'E4E0D8',space:1}}}));
+  children.push(new D.Paragraph({children:[new D.TextRun({text:(fr?'Partie 1 : ':'Party 1: '),size:22,bold:true,font:'Arial'}),new D.TextRun({text:'_________________________________          ',size:22,font:'Arial'}),new D.TextRun({text:(fr?'Partie 2 : ':'Party 2: '),size:22,bold:true,font:'Arial'}),new D.TextRun({text:'_________________________________',size:22,font:'Arial'})],spacing:{after:200}}));
+  children.push(new D.Paragraph({children:[new D.TextRun({text:(fr?'Date : ':'Date: '),size:22,bold:true,font:'Arial'}),new D.TextRun({text:'______________________________                    ',size:22,font:'Arial'}),new D.TextRun({text:(fr?'Date : ':'Date: '),size:22,bold:true,font:'Arial'}),new D.TextRun({text:'______________________________',size:22,font:'Arial'})],spacing:{after:400}}));
+  children.push(new D.Paragraph({children:[new D.TextRun({text:'⚠ '+(fr?'Ce document est un projet structuré généré par IA. Il ne constitue pas un avis juridique. Faites-le réviser par un avocat qualifié avant toute signature.':'This document is a structured AI-generated draft. It does not constitute legal advice. Have it reviewed by a qualified lawyer before signing.'),size:18,font:'Arial',color:'92400E',italics:true})],spacing:{before:200}}));
+  var doc=new D.Document({sections:[{properties:{page:{size:{width:12240,height:15840},margin:{top:1440,right:1440,bottom:1440,left:1440}}},children:children}]});
+  D.Packer.toBlob(doc).then(function(blob){var u=URL.createObjectURL(blob);var a=document.createElement('a');a.href=u;a.download='LegalAI-'+cName.replace(/[^a-z0-9]/gi,'-')+'-'+new Date().toISOString().slice(0,10)+'.docx';a.click();URL.revokeObjectURL(u);});
+}
+
+// ── INIT ───────────────────────────────────────
+applyLang();
+</script>
+</body>
+</html>

@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LexAI — Agent juridique québécois</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F7F5F0;
+    --surface: #FFFFFF;
+    --border: #E4E0D8;
+    --border-soft: #EDE9E2;
+    --text: #1C1917;
+    --text-secondary: #78716C;
+    --text-tertiary: #A8A29E;
+    --accent: #1C1917;
+    --accent-hover: #292524;
+    --green: #15803D;
+    --green-bg: #F0FDF4;
+    --green-border: #86EFAC;
+    --blue: #1E40AF;
+    --blue-bg: #EFF6FF;
+    --blue-border: #93C5FD;
+    --amber: #92400E;
+    --amber-bg: #FFFBEB;
+    --amber-border: #FCD34D;
+    --red: #991B1B;
+    --red-bg: #FEF2F2;
+    --red-border: #FECACA;
+    --serif: 'DM Serif Display', Georgia, serif;
+    --sans: 'DM Sans', system-ui, sans-serif;
+    --radius: 10px;
+    --radius-sm: 6px;
+    --radius-pill: 999px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; font-family: var(--sans); background: var(--bg); color: var(--text); font-size: 14px; -webkit-font-smoothing: antialiased; }
+
+  /* ── LAYOUT ── */
+  .app { display: flex; height: 100vh; overflow: hidden; }
+  .sidebar { width: 230px; min-width: 230px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+
+  /* ── SIDEBAR ── */
+  .sb-brand { padding: 20px 18px 16px; border-bottom: 1px solid var(--border-soft); }
+  .sb-brand-name { font-family: var(--serif); font-size: 22px; color: var(--text); line-height: 1; }
+  .sb-brand-name em { font-style: italic; color: var(--text-secondary); }
+  .sb-brand-tag { font-size: 10px; color: var(--text-tertiary); margin-top: 3px; letter-spacing: 0.08em; text-transform: uppercase; }
+  .sb-steps { padding: 14px 10px; flex: 1; }
+  .step-row { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: var(--radius-sm); margin-bottom: 2px; cursor: default; }
+  .step-row.active { background: var(--bg); }
+  .step-num { width: 24px; height: 24px; border-radius: 50%; border: 1.5px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: var(--text-tertiary); flex-shrink: 0; transition: all 0.2s; }
+  .step-num.done { background: var(--green); border-color: var(--green); color: #fff; font-size: 12px; }
+  .step-num.cur { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .step-label { font-size: 12px; color: var(--text-secondary); font-weight: 400; }
+  .step-row.active .step-label { color: var(--text); font-weight: 500; }
+  .sb-footer { padding: 14px 18px; border-top: 1px solid var(--border-soft); display: flex; flex-direction: column; gap: 8px; }
+  .lang-toggle { display: flex; background: var(--bg); border-radius: var(--radius-sm); padding: 3px; border: 1px solid var(--border); }
+  .lang-opt { flex: 1; padding: 5px 8px; border-radius: 5px; font-size: 11px; font-weight: 500; text-align: center; cursor: pointer; color: var(--text-secondary); transition: all 0.15s; border: none; background: none; font-family: var(--sans); }
+  .lang-opt.active { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+  .sb-disclaimer { font-size: 10px; color: var(--text-tertiary); line-height: 1.5; }
+
+  /* ── PROGRESS ── */
+  .prog-bar { height: 2px; background: var(--border-soft); flex-shrink: 0; }
+  .prog-fill { height: 100%; background: var(--accent); transition: width 0.4s ease; }
+
+  /* ── PANELS ── */
+  .panel { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+  .panel.on { display: flex; }
+
+  /* ── STEP 1 ── */
+  .p1-body { flex: 1; overflow-y: auto; padding: 28px 32px; }
+  .p1-header { margin-bottom: 28px; }
+  .p1-title { font-family: var(--serif); font-size: 26px; color: var(--text); margin-bottom: 6px; }
+  .p1-sub { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+  .field-group { margin-bottom: 24px; }
+  .field-label { font-size: 11px; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 10px; }
+  .field-hint { font-size: 12px; color: var(--text-tertiary); margin-bottom: 8px; line-height: 1.5; }
+  .ct-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .ct-pill { padding: 11px 14px; border: 1.5px solid var(--border); border-radius: var(--radius); font-size: 13px; color: var(--text-secondary); cursor: pointer; background: var(--surface); transition: all 0.15s; line-height: 1.3; font-family: var(--sans); text-align: left; }
+  .ct-pill:hover { border-color: #C5BFB5; color: var(--text); background: var(--bg); }
+  .ct-pill.sel { border-color: var(--accent); border-width: 2px; color: var(--text); font-weight: 600; background: var(--bg); }
+  .leg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .leg-pill { padding: 7px 12px; border: 1px solid var(--border); border-radius: var(--radius-pill); font-size: 11px; color: var(--text-secondary); cursor: pointer; background: var(--surface); text-align: center; transition: all 0.15s; font-family: var(--sans); }
+  .leg-pill:hover { border-color: #C5BFB5; color: var(--text); }
+  .leg-pill.sel { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 500; }
+  input[type=text], textarea { width: 100%; padding: 11px 13px; border: 1.5px solid var(--border); border-radius: var(--radius); font-size: 13px; font-family: var(--sans); color: var(--text); background: var(--surface); resize: vertical; outline: none; transition: border-color 0.15s; line-height: 1.5; }
+  input[type=text]:focus, textarea:focus { border-color: #A09890; }
+  .p1-footer { padding: 16px 32px; border-top: 1px solid var(--border-soft); display: flex; justify-content: flex-end; align-items: center; gap: 12px; background: var(--surface); flex-shrink: 0; }
+  .api-row { display: flex; align-items: center; gap: 8px; flex: 1; }
+  .api-label { font-size: 11px; color: var(--text-tertiary); white-space: nowrap; }
+  .api-input { padding: 8px 11px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 12px; font-family: monospace; color: var(--text); background: var(--bg); outline: none; flex: 1; }
+  .api-input:focus { border-color: #A09890; }
+
+  /* ── BUTTONS ── */
+  .btn { padding: 10px 22px; border-radius: var(--radius); font-size: 13px; font-weight: 600; cursor: pointer; border: 1.5px solid var(--border); background: var(--surface); color: var(--text); transition: all 0.15s; font-family: var(--sans); white-space: nowrap; }
+  .btn:hover { background: var(--bg); }
+  .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn.primary:hover { background: var(--accent-hover); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn.sm { padding: 7px 14px; font-size: 12px; }
+
+  /* ── STEP 2 CHAT ── */
+  .chat-header { padding: 14px 24px; border-bottom: 1px solid var(--border-soft); background: var(--surface); flex-shrink: 0; }
+  .chat-header-name { font-family: var(--serif); font-size: 16px; color: var(--text); }
+  .chat-header-sub { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; }
+  .chat-header-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+  .tag { padding: 3px 9px; border-radius: var(--radius-pill); font-size: 10px; background: var(--bg); color: var(--text-secondary); border: 1px solid var(--border); }
+  .chat-messages { flex: 1; overflow-y: auto; padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; }
+  .msg { max-width: 80%; }
+  .msg.bot { align-self: flex-start; }
+  .msg.user { align-self: flex-end; }
+  .msg-name { font-size: 10px; color: var(--text-tertiary); margin-bottom: 4px; letter-spacing: 0.03em; }
+  .msg-bubble { padding: 12px 15px; border-radius: 12px; font-size: 13px; line-height: 1.65; }
+  .msg.bot .msg-bubble { background: var(--surface); color: var(--text); border: 1px solid var(--border-soft); border-radius: 3px 12px 12px 12px; box-shadow: var(--shadow); }
+  .msg.user .msg-bubble { background: var(--accent); color: #fff; border-radius: 12px 3px 12px 12px; }
+  .chat-input-row { padding: 14px 24px; border-top: 1px solid var(--border-soft); display: flex; gap: 10px; background: var(--surface); flex-shrink: 0; align-items: flex-end; }
+  .chat-input { flex: 1; padding: 11px 14px; border: 1.5px solid var(--border); border-radius: var(--radius); font-size: 13px; font-family: var(--sans); color: var(--text); background: var(--bg); outline: none; transition: border-color 0.15s; resize: none; line-height: 1.5; }
+  .chat-input:focus { border-color: #A09890; background: var(--surface); }
+  .send-btn { padding: 11px 16px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius); font-size: 16px; cursor: pointer; transition: all 0.15s; flex-shrink: 0; }
+  .send-btn:hover { background: var(--accent-hover); }
+  .send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── TYPING ── */
+  .typing-dots { display: inline-flex; gap: 4px; align-items: center; padding: 4px 2px; }
+  .typing-dots span { width: 5px; height: 5px; border-radius: 50%; background: var(--text-tertiary); animation: bounce 1.3s infinite; }
+  .typing-dots span:nth-child(2) { animation-delay: 0.18s; }
+  .typing-dots span:nth-child(3) { animation-delay: 0.36s; }
+  @keyframes bounce { 0%,60%,100% { transform: translateY(0); } 30% { transform: translateY(-5px); } }
+
+  /* ── CONFIRM BOX ── */
+  .confirm-box { margin-top: 10px; padding: 12px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); }
+  .confirm-btns { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .cbtn { padding: 8px 16px; border-radius: var(--radius-sm); font-size: 12px; font-weight: 600; cursor: pointer; border: 1.5px solid var(--border); background: var(--surface); color: var(--text); font-family: var(--sans); transition: all 0.15s; }
+  .cbtn:hover { background: var(--bg); }
+  .cbtn.yes { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .cbtn.yes:hover { background: var(--accent-hover); }
+
+  /* ── STEP 3 DOC ── */
+  .doc-wrap { display: flex; flex: 1; overflow: hidden; }
+  .doc-main { flex: 1; overflow-y: auto; padding: 36px 44px; background: var(--surface); font-size: 13px; line-height: 1.9; color: var(--text); }
+  .doc-side { width: 250px; min-width: 250px; border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; background: var(--bg); }
+  .ds-head { padding: 14px 16px; border-bottom: 1px solid var(--border-soft); }
+  .ds-head-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-tertiary); }
+  .ds-body { padding: 12px 14px; flex: 1; overflow-y: auto; }
+  .nudge-pill { padding: 10px 12px; border: 1px solid var(--blue-border); border-radius: var(--radius); background: var(--blue-bg); cursor: pointer; margin-bottom: 8px; font-size: 11px; color: var(--blue); line-height: 1.5; transition: all 0.15s; }
+  .nudge-pill:hover { background: #DBEAFE; }
+  .nudge-pill.added { background: var(--green-bg); border-color: var(--green-border); color: var(--green); cursor: default; }
+  .nudge-pill-name { font-weight: 600; margin-bottom: 2px; display: flex; align-items: center; gap: 5px; }
+  .nudge-pill-desc { font-size: 10px; opacity: 0.85; line-height: 1.4; }
+  .ds-foot { padding: 12px 14px; border-top: 1px solid var(--border-soft); display: flex; flex-direction: column; gap: 7px; background: var(--surface); }
+
+  /* ── DOC STYLES ── */
+  .doc-watermark { font-size: 10px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 20px; }
+  .doc-title { font-family: var(--serif); font-size: 22px; color: var(--text); margin-bottom: 6px; }
+  .doc-meta { font-size: 11px; color: var(--text-tertiary); margin-bottom: 24px; }
+  .doc-divider { border: none; border-top: 1px solid var(--border-soft); margin: 18px 0; }
+  .doc-section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-tertiary); margin-bottom: 12px; }
+  .doc-highlight { background: #FEF3C7; border-radius: 3px; padding: 2px 5px; color: var(--amber); font-weight: 500; }
+  .doc-clause-added { border-left: 2px solid var(--green); padding-left: 14px; margin: 12px 0; }
+  .doc-qa { margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid var(--border-soft); font-size: 13px; }
+  .doc-qa-q { font-size: 10px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px; }
+  .doc-qa-a { color: var(--text); }
+  .doc-qc-note { padding: 10px 14px; background: var(--amber-bg); border: 1px solid var(--amber-border); border-radius: var(--radius-sm); font-size: 12px; color: var(--amber); line-height: 1.5; margin-bottom: 8px; }
+  .doc-disclaimer { margin-top: 28px; padding: 14px 16px; background: var(--amber-bg); border: 1px solid var(--amber-border); border-radius: var(--radius); font-size: 11px; color: var(--amber); line-height: 1.6; }
+  .sig-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 16px; }
+  .sig-block { }
+  .sig-label { font-size: 11px; color: var(--text-tertiary); margin-bottom: 4px; }
+  .sig-line { margin-top: 36px; border-top: 1px solid var(--border); padding-top: 6px; font-size: 11px; color: var(--text-tertiary); }
+
+  /* ── ERROR ── */
+  .error-msg { padding: 10px 14px; background: var(--red-bg); border: 1px solid var(--red-border); border-radius: var(--radius-sm); font-size: 12px; color: var(--red); line-height: 1.5; }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sb-brand">
+      <div class="sb-brand-name">Lex<em>AI</em></div>
+      <div class="sb-brand-tag">Agent juridique · Québec</div>
+    </div>
+    <div class="sb-steps" id="sb-steps"></div>
+    <div class="sb-footer">
+      <div class="lang-toggle">
+        <button class="lang-opt active" id="lang-fr" onclick="setLang('fr')">Français</button>
+        <button class="lang-opt" id="lang-en" onclick="setLang('en')">English</button>
+      </div>
+      <div class="sb-disclaimer" id="sb-disclaimer">Agent structuré · non un avocat</div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="prog-bar"><div class="prog-fill" id="prog" style="width:33%"></div></div>
+
+    <!-- PANEL 1 — CONFIG -->
+    <div class="panel on" id="panel-0">
+      <div class="p1-body">
+        <div class="p1-header">
+          <div class="p1-title" id="t-p1title">Votre contrat</div>
+          <div class="p1-sub" id="t-p1sub">Dites-nous ce dont vous avez besoin. L'agent s'adapte à votre situation et votre industrie.</div>
+        </div>
+
+        <div class="field-group">
+          <div class="field-label" id="t-lbl-ct">Type de contrat</div>
+          <div class="ct-grid" id="ct-grid"></div>
+        </div>
+
+        <div class="field-group">
+          <div class="field-label" id="t-lbl-ind">Votre domaine</div>
+          <input type="text" id="inp-industry"
+            placeholder="Ex. : je suis créateur TikTok, consultant tech, tuteur de maths, agence de design..." />
+        </div>
+
+        <div class="field-group">
+          <div class="field-label" id="t-lbl-leg">Législations applicables</div>
+          <div class="leg-grid" id="leg-grid"></div>
+        </div>
+
+        <div class="field-group">
+          <div class="field-label" id="t-lbl-det">Dites-nous en plus sur votre situation</div>
+          <div class="field-hint" id="t-hint-det">Êtes-vous une entreprise ou un particulier? Avez-vous déjà une relation avec l'autre partie? Des détails importants à inclure?</div>
+          <textarea id="inp-details" rows="3"
+            placeholder="Ex. : je travaille avec une marque pour 3 publications par mois, ils veulent aussi utiliser mes vidéos en publicité payante sur Meta..."></textarea>
+        </div>
+      </div>
+
+      <div class="p1-footer">
+        <div class="api-row">
+          <span class="api-label" id="t-api-lbl">Clé API Anthropic :</span>
+          <input class="api-input" type="password" id="inp-apikey" placeholder="sk-ant-..." />
+        </div>
+        <button class="btn primary" id="btn-start" onclick="startIntake()">Démarrer →</button>
+      </div>
+    </div>
+
+    <!-- PANEL 2 — CHAT -->
+    <div class="panel" id="panel-1">
+      <div class="chat-header">
+        <div class="chat-header-name" id="chat-contract-name">—</div>
+        <div class="chat-header-sub" id="t-chat-sub">Agent juridique IA · collecte structurée</div>
+        <div class="chat-header-tags" id="chat-tags"></div>
+      </div>
+      <div class="chat-messages" id="chat-messages"></div>
+      <div class="chat-input-row">
+        <textarea class="chat-input" id="chat-input" rows="1"
+          placeholder="Votre réponse..."
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();handleSend();}"></textarea>
+        <button class="send-btn" id="send-btn" onclick="handleSend()">↑</button>
+      </div>
+    </div>
+
+    <!-- PANEL 3 — DOC -->
+    <div class="panel" id="panel-2">
+      <div class="doc-wrap">
+        <div class="doc-main" id="doc-main"></div>
+        <div class="doc-side">
+          <div class="ds-head">
+            <div class="ds-head-title" id="t-nudge-title">Clauses suggérées</div>
+          </div>
+          <div class="ds-body" id="nudge-list"></div>
+          <div class="ds-foot">
+            <button class="btn sm" id="btn-translate" onclick="doTranslate()">Traduire en anglais</button>
+            <button class="btn sm primary" onclick="doExport()">Exporter ↗</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────
+var L = 'fr';
+var step = 0;
+var selC = '';
+var selLegs = [];
+var chatHistory = [];
+var addedNudges = {};
+var isLoading = false;
+var intakeComplete = false;
+
+// ─────────────────────────────────────────────
+// DATA
+// ─────────────────────────────────────────────
+var CONTRACT_TYPES = [
+  { fr: 'Contrat de travail',              en: 'Employment contract',        k: 'employment' },
+  { fr: 'Entrepreneur indépendant',        en: 'Independent contractor',     k: 'contractor' },
+  { fr: 'NDA',                             en: 'NDA',                        k: 'nda' },
+  { fr: 'Politique de confidentialité',    en: 'Privacy policy',             k: 'privacy' },
+  { fr: 'Non-concurrence / Non-sollicitation', en: 'Non-compete / Non-solicit', k: 'noncompete' },
+  { fr: "Lettre d'intention",              en: 'Letter of intent',           k: 'loi' },
+  { fr: 'Conditions générales',            en: 'Terms & conditions',         k: 'tnc' },
+  { fr: 'Contrat de services',             en: 'Service agreement',          k: 'service' }
+];
+
+var LEGS = [
+  { fr: 'Code civil du Québec',      en: 'Quebec Civil Code',        k: 'ccq' },
+  { fr: 'Loi fédérale (Canada)',     en: 'Federal law (Canada)',     k: 'fed' },
+  { fr: 'Loi 25 (Qc)',               en: 'Law 25 (QC)',              k: 'l25' },
+  { fr: 'PIPEDA',                    en: 'PIPEDA',                   k: 'pip' },
+  { fr: 'RGPD / GDPR',              en: 'GDPR',                     k: 'gdpr' },
+  { fr: 'Normes du travail (Qc)',    en: 'QC Labour Standards',      k: 'lnt' },
+  { fr: 'Loi sur la concurrence',    en: 'Competition Act',          k: 'comp' },
+  { fr: 'Charte des droits (Qc)',    en: 'QC Charter of Rights',     k: 'charte' }
+];
+
+var CLAUSE_LIB = {
+  usage_rights:     { fr: "Droits d'utilisation",               en: "Usage rights",                  desc_fr: "Limite l'usage du contenu aux fins convenues uniquement.",                          desc_en: "Limits content use to agreed purposes only.",                             triggers: ['influenc','tiktok','content','créateur','creator','ugc','brand','marque','media','vidéo','video','photo','design','publicité','advertising','instagram','youtube','réseaux','social'] },
+  whitelisting:     { fr: "Droits de diffusion (whitelisting)",  en: "Whitelisting rights",           desc_fr: "Encadre la diffusion payante du contenu via le compte du créateur.",               desc_en: "Governs paid promotion through the creator's account.",                    triggers: ['influenc','tiktok','instagram','youtube','content','creator','ugc','social','réseaux','brand','marque','pub payante','paid ad'] },
+  likeness_rights:  { fr: "Droits à l'image",                   en: "Likeness rights",               desc_fr: "Limite l'utilisation de l'image et du nom aux supports expressément convenus.",    desc_en: "Limits use of image and name to expressly agreed media.",                  triggers: ['influenc','tiktok','creator','ugc','photo','vidéo','video','model','mannequin','content','image'] },
+  exclusivity:      { fr: "Exclusivité sectorielle",             en: "Category exclusivity",          desc_fr: "Interdit la collaboration avec des marques concurrentes pendant la période.",       desc_en: "Prohibits collaboration with competing brands during agreed period.",       triggers: ['influenc','content','creator','brand','marque','ugc','exclusiv'] },
+  content_approval: { fr: "Processus d'approbation du contenu", en: "Content approval process",      desc_fr: "Définit les rondes de révision et délais d'approbation avant publication.",         desc_en: "Defines revision rounds and approval timelines before publishing.",         triggers: ['influenc','content','creator','ugc','brand','marque','agence','agency','design','vidéo','video','publication'] },
+  ip_assignment:    { fr: "Cession de propriété intellectuelle", en: "IP assignment",                 desc_fr: "Transfère tous les livrables en pleine propriété au client après paiement.",        desc_en: "Transfers all deliverables to client upon full payment.",                  triggers: ['tech','développeur','developer','logiciel','software','design','agence','agency','consultant','app','saas','programmeur'] },
+  source_code:      { fr: "Propriété du code source",            en: "Source code ownership",         desc_fr: "Le code source reste la propriété exclusive du client après livraison.",            desc_en: "Source code remains client's exclusive property after delivery.",          triggers: ['tech','développeur','developer','logiciel','software','saas','app','application','programmeur','code'] },
+  session_cancel:   { fr: "Politique d'annulation de séance",    en: "Session cancellation policy",   desc_fr: "Définit les frais d'annulation selon le délai de préavis donné.",                   desc_en: "Defines cancellation fees based on notice period given.",                  triggers: ['tuteur','tutor','coach','formateur','trainer','mentor','cours','lesson','class','enseignant','prof','séance'] },
+  materials_ip:     { fr: "Propriété des supports créés",        en: "Educational materials IP",      desc_fr: "Les matériaux pédagogiques restent la propriété intellectuelle du prestataire.",    desc_en: "Educational materials remain the provider's intellectual property.",       triggers: ['tuteur','tutor','coach','formateur','trainer','cours','lesson','formation','éducation','enseignant','prof'] },
+  no_employee:      { fr: "Absence de lien de subordination",    en: "No employment relationship",    desc_fr: "Confirme qu'aucun lien d'emploi n'est créé par ce contrat.",                        desc_en: "Confirms no employment relationship is created by this contract.",         triggers: ['contractor','indépendant','freelance','consultant','tuteur','tutor','coach','pigiste','autonome'] },
+  data_breach:      { fr: "Notification de violation de données",en: "Data breach notification",      desc_fr: "Obligation de notifier les autorités dans les 72h en cas de fuite.",                desc_en: "Obligation to notify authorities within 72h of a breach.",                 triggers: ['privacy','données','data','rgpd','gdpr','loi 25','pipeda','tech','saas','app','numérique','digital'] },
+  right_erasure:    { fr: "Droit à l'effacement",                en: "Right to erasure",              desc_fr: "Les utilisateurs peuvent demander la suppression de leurs données personnelles.",    desc_en: "Users can request deletion of their personal data.",                       triggers: ['privacy','données','data','rgpd','gdpr','loi 25','consommateur','utilisateur','user'] },
+  change_orders:    { fr: "Gestion des avenants",                en: "Change order management",       desc_fr: "Toute modification de portée doit faire l'objet d'un avenant signé.",               desc_en: "Any scope change requires a written amendment signed by both parties.",    triggers: ['service','agence','agency','construction','rénovation','renovation','consultant','design','projet','project'] },
+  liability_cap:    { fr: "Plafond de responsabilité",           en: "Liability cap",                 desc_fr: "Limite la responsabilité totale au montant des honoraires reçus.",                  desc_en: "Caps total liability to fees received under the contract.",                triggers: ['service','agence','agency','consultant','tech','saas','développeur','contractor','entreprise'] },
+  force_majeure:    { fr: "Force majeure",                       en: "Force majeure",                 desc_fr: "Exclut la responsabilité en cas d'événement imprévisible et irrésistible.",         desc_en: "Excludes liability for unforeseeable and unavoidable events.",             triggers: ['employment','service','contractor','tnc','loi','construction','international'] },
+  equity_vesting:   { fr: "Acquisition progressive (vesting)",   en: "Equity vesting",               desc_fr: "Les options s'acquièrent progressivement avec une période cliff initiale.",          desc_en: "Options vest progressively with an initial cliff period.",                 triggers: ['startup','equity','options','vesting','actions','tech','fondateur','founder'] },
+  sync_licensing:   { fr: "Licence de synchronisation",          en: "Sync licensing",               desc_fr: "L'usage d'œuvres musicales dans le contenu nécessite les droits de sync.",          desc_en: "Use of music in content requires prior sync rights clearance.",            triggers: ['musique','music','artist','artiste','label','vidéo','video','film','production','sync'] },
+  non_solicit:      { fr: "Non-sollicitation de la clientèle",   en: "Non-solicitation of clients",  desc_fr: "Interdit le démarchage direct des clients de l'autre partie après contrat.",         desc_en: "Prohibits direct solicitation of the other party's clients post-contract.",triggers: ['service','agence','consultant','contractor','indépendant','freelance'] }
+};
+
+var QC_DEFAULTS = {
+  employment:  { law: 'Code civil du Québec, RLRQ c CCQ-1991', labour: 'Loi sur les normes du travail, RLRQ c N-1.1', jur: 'Province de Québec' },
+  contractor:  { law: 'Code civil du Québec, RLRQ c CCQ-1991', jur: 'Province de Québec', note: 'Entrepreneur indépendant — aucun lien de subordination (art. 2085 C.c.Q.)' },
+  nda:         { law: 'Code civil du Québec, RLRQ c CCQ-1991', jur: 'Province de Québec' },
+  privacy:     { law: 'Loi 25, RLRQ c P-39.1', pipeda: 'LPRPDE, LC 2000, c 5', jur: 'Province de Québec' },
+  noncompete:  { law: 'Code civil du Québec, RLRQ c CCQ-1991', jur: 'Province de Québec', note: 'Durée recommandée : max 12 mois (art. 2089 C.c.Q.)' },
+  loi:         { law: 'Code civil du Québec, RLRQ c CCQ-1991', jur: 'Province de Québec', note: 'Ce document ne constitue pas un engagement ferme.' },
+  tnc:         { law: 'Code civil du Québec, RLRQ c CCQ-1991', consumer: 'Loi sur la protection du consommateur, RLRQ c P-40.1', jur: 'Province de Québec' },
+  service:     { law: 'Code civil du Québec, RLRQ c CCQ-1991', jur: 'Province de Québec' }
+};
+
+// ─────────────────────────────────────────────
+// SYSTEM PROMPT
+// ─────────────────────────────────────────────
+function buildSystemPrompt() {
+  var cObj = CONTRACT_TYPES.find(function(c) { return c.k === selC; });
+  var cName = cObj ? cObj.fr : selC;
+  var legNames = selLegs.map(function(k) { var l = LEGS.find(function(x) { return x.k === k; }); return l ? l.fr : k; }).join(', ') || 'Code civil du Québec (défaut)';
+  var industry = document.getElementById('inp-industry').value || 'non précisé';
+  var details = document.getElementById('inp-details').value || 'aucun';
+  var qc = QC_DEFAULTS[selC] || QC_DEFAULTS.service;
+  var responseLang = L === 'fr' ? 'French' : 'English';
+  var deflect = L === 'fr'
+    ? "Cette question dépasse mon rôle. Consultez un avocat qualifié pour ce point."
+    : "That question is outside my scope. Please consult a qualified lawyer for this.";
+  var confirmLabel = L === 'fr' ? 'INTAKE_COMPLETE' : 'INTAKE_COMPLETE';
+
+  return [
+    "You are a structured legal document intake system specialized for Quebec business contracts.",
+    "You are a FORM ENGINE and workflow system — NOT a legal advisor and NOT a general assistant.",
+    "",
+    "LANGUAGE: Always respond entirely in " + responseLang + ".",
+    "",
+    "ABSOLUTE RULES — NEVER BREAK:",
+    "1. Ask EXACTLY ONE question per message. Never combine two questions in one response.",
+    "2. Keep every response under 3 sentences. Be direct, not conversational.",
+    "3. After the user answers, acknowledge in ONE short sentence, then immediately ask the next question.",
+    "4. NEVER cite, invent, or reference any legal statute not explicitly listed in this prompt.",
+    "5. NEVER give legal opinions or predictions. If asked, respond only with: \"" + deflect + "\"",
+    "6. NEVER generate a contract draft — that is handled by the system separately.",
+    "7. NEVER add disclaimers, preambles, or explanatory text beyond the specified format.",
+    "8. For gap analysis suggestions, use ONLY this exact format: \"Clause suggérée : [name] — [1 sentence explanation]\"",
+    "9. When all required fields are collected AND gap analysis is done, output the exact token: INTAKE_COMPLETE",
+    "",
+    "INDUSTRY SIGNAL DETECTION — analyze industry + details fields carefully:",
+    "- Creator / influencer (tiktok, ugc, content creator, instagram, youtube, brand deal, pub payante, whitelisting): Ask specifically about: number of posts/deliverables, content approval rounds, whitelisting permission, exclusivity with competing brands, usage duration, geographic scope of use.",
+    "- Tech / developer (dev, software, saas, app, logiciel, programmeur): Ask about: source code ownership, API and deployment rights, technical documentation, bug warranty period.",
+    "- Education / coaching (tutor, coach, trainer, teacher, mentor, cours, séance): Ask about: session cancellation policy, who owns materials created, student data handling, online vs in-person.",
+    "- Music / artist (music, artist, label, sync, recording, artiste): Ask about: master rights vs publishing, sync licensing, royalty structure, credit and attribution.",
+    "- Construction / renovation: Ask about: warranty period, defect liability, material specs, work site responsibilities.",
+    "- Agency / consultant (agence, agency, consultant): Ask about: deliverable acceptance criteria, change order process, IP on work product.",
+    "- Default: Proceed with standard questions for the contract type.",
+    "",
+    "WORKFLOW — follow this exact sequence:",
+    "STAGE 1: In ONE sentence, confirm the contract type, jurisdiction (Quebec), and what you detected from their industry/details.",
+    "STAGE 2: Collect required information, ONE question at a time:",
+    "  • Full legal names and roles of all parties",
+    "  • Purpose and scope of the agreement",
+    "  • Duration / timeline",
+    "  • Compensation or payment terms (if applicable)",
+    "  • Confidentiality requirements",
+    "  • Intellectual property ownership (ADAPT based on detected industry signals)",
+    "  • Termination conditions and notice period",
+    "  • Dispute resolution preference (court vs arbitration)",
+    "  • Industry-specific questions based on detected signals (REQUIRED — do not skip)",
+    "STAGE 3: After all info is collected, output 3–5 clause suggestions in the specified format. Nothing else.",
+    "STAGE 4: Output exactly: INTAKE_COMPLETE",
+    "",
+    "CONTEXT FOR THIS SESSION:",
+    "Contract type: " + cName,
+    "Industry provided: " + industry,
+    "Additional details: " + details,
+    "Applicable legislation: " + legNames,
+    "Quebec legal defaults: " + JSON.stringify(qc)
+  ].join('\n');
+}
+
+// ─────────────────────────────────────────────
+// RENDER HELPERS
+// ─────────────────────────────────────────────
+function renderNav() {
+  var labels = L === 'fr'
+    ? ['Paramètres', 'Collecte & analyse', 'Révision & export']
+    : ['Parameters', 'Intake & analysis', 'Review & export'];
+  var el = document.getElementById('sb-steps');
+  el.innerHTML = '';
+  labels.forEach(function(s, i) {
+    var row = document.createElement('div');
+    row.className = 'step-row' + (i === step ? ' active' : '');
+    var n = document.createElement('div');
+    n.className = 'step-num' + (i < step ? ' done' : i === step ? ' cur' : '');
+    n.textContent = i < step ? '✓' : (i + 1);
+    var l = document.createElement('div');
+    l.className = 'step-label';
+    l.textContent = s;
+    row.appendChild(n); row.appendChild(l);
+    el.appendChild(row);
+  });
+  document.getElementById('prog').style.width = [33, 66, 100][step] + '%';
+}
+
+function renderCT() {
+  var g = document.getElementById('ct-grid');
+  g.innerHTML = '';
+  CONTRACT_TYPES.forEach(function(c) {
+    var d = document.createElement('button');
+    d.className = 'ct-pill' + (selC === c.k ? ' sel' : '');
+    d.textContent = L === 'fr' ? c.fr : c.en;
+    d.onclick = (function(k) { return function() { selC = k; renderCT(); }; })(c.k);
+    g.appendChild(d);
+  });
+}
+
+function renderLegs() {
+  var g = document.getElementById('leg-grid');
+  g.innerHTML = '';
+  LEGS.forEach(function(l) {
+    var d = document.createElement('button');
+    d.className = 'leg-pill' + (selLegs.indexOf(l.k) > -1 ? ' sel' : '');
+    d.textContent = L === 'fr' ? l.fr : l.en;
+    d.onclick = (function(k) {
+      return function() {
+        var i = selLegs.indexOf(k);
+        if (i > -1) selLegs.splice(i, 1); else selLegs.push(k);
+        renderLegs();
+      };
+    })(l.k);
+    g.appendChild(d);
+  });
+}
+
+function applyLang() {
+  document.getElementById('lang-fr').classList.toggle('active', L === 'fr');
+  document.getElementById('lang-en').classList.toggle('active', L === 'en');
+  document.getElementById('t-p1title').textContent = L === 'fr' ? 'Votre contrat' : 'Your contract';
+  document.getElementById('t-p1sub').textContent = L === 'fr'
+    ? "Dites-nous ce dont vous avez besoin. L'agent s'adapte à votre situation et votre industrie."
+    : "Tell us what you need. The agent adapts to your situation and industry.";
+  document.getElementById('t-lbl-ct').textContent = L === 'fr' ? 'Type de contrat' : 'Contract type';
+  document.getElementById('t-lbl-ind').textContent = L === 'fr' ? 'Votre domaine' : 'Your field';
+  document.getElementById('t-lbl-leg').textContent = L === 'fr' ? 'Législations applicables' : 'Applicable legislation';
+  document.getElementById('t-lbl-det').textContent = L === 'fr' ? 'Dites-nous en plus sur votre situation' : 'Tell us more about your situation';
+  document.getElementById('t-hint-det').textContent = L === 'fr'
+    ? "Êtes-vous une entreprise ou un particulier? Avez-vous déjà une relation avec l'autre partie? Des détails importants?"
+    : "Are you a business or individual? Do you already have a relationship with the other party? Any important details?";
+  document.getElementById('inp-industry').placeholder = L === 'fr'
+    ? "Ex. : je suis créateur TikTok, consultant tech, tuteur de maths, agence de design..."
+    : "E.g. I'm a TikTok creator, tech consultant, math tutor, design agency...";
+  document.getElementById('inp-details').placeholder = L === 'fr'
+    ? "Ex. : je travaille avec une marque pour 3 publications par mois, ils veulent aussi diffuser mes vidéos en publicité payante..."
+    : "E.g. I work with a brand for 3 posts per month, they also want to run my videos as paid ads...";
+  document.getElementById('t-api-lbl').textContent = L === 'fr' ? 'Clé API Anthropic :' : 'Anthropic API key:';
+  document.getElementById('btn-start').textContent = L === 'fr' ? 'Démarrer →' : 'Start →';
+  document.getElementById('t-chat-sub').textContent = L === 'fr' ? 'Agent juridique IA · collecte structurée' : 'AI Legal Agent · structured intake';
+  document.getElementById('t-nudge-title').textContent = L === 'fr' ? 'Clauses suggérées' : 'Suggested clauses';
+  document.getElementById('btn-translate').textContent = L === 'fr' ? 'Traduire en anglais' : 'Traduire en français';
+  document.getElementById('sb-disclaimer').textContent = L === 'fr' ? 'Agent structuré · non un avocat' : 'Structured agent · not a lawyer';
+  document.getElementById('chat-input').placeholder = L === 'fr' ? 'Votre réponse...' : 'Your reply...';
+  renderCT(); renderLegs(); renderNav();
+}
+
+function setLang(l) {
+  L = l;
+  applyLang();
+}
+
+function goPanel(n) {
+  step = n;
+  document.getElementById('panel-0').classList.toggle('on', n === 0);
+  document.getElementById('panel-1').classList.toggle('on', n === 1);
+  document.getElementById('panel-2').classList.toggle('on', n === 2);
+  renderNav();
+}
+
+// ─────────────────────────────────────────────
+// CHAT
+// ─────────────────────────────────────────────
+function addMsg(role, html) {
+  var ca = document.getElementById('chat-messages');
+  var m = document.createElement('div');
+  m.className = 'msg ' + role;
+  if (role === 'bot') {
+    var nm = document.createElement('div');
+    nm.className = 'msg-name';
+    nm.textContent = L === 'fr' ? 'Agent juridique' : 'Legal Agent';
+    m.appendChild(nm);
+  }
+  var b = document.createElement('div');
+  b.className = 'msg-bubble';
+  b.innerHTML = html;
+  m.appendChild(b);
+  ca.appendChild(m);
+  ca.scrollTop = ca.scrollHeight;
+  return b;
+}
+
+function showTyping() {
+  var ca = document.getElementById('chat-messages');
+  removeTyping();
+  var m = document.createElement('div');
+  m.className = 'msg bot';
+  m.id = 'typing-el';
+  var nm = document.createElement('div');
+  nm.className = 'msg-name';
+  nm.textContent = L === 'fr' ? 'Agent juridique' : 'Legal Agent';
+  var b = document.createElement('div');
+  b.className = 'msg-bubble';
+  b.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
+  m.appendChild(nm); m.appendChild(b);
+  ca.appendChild(m);
+  ca.scrollTop = ca.scrollHeight;
+}
+
+function removeTyping() {
+  var t = document.getElementById('typing-el');
+  if (t) t.remove();
+}
+
+function setLoading(state) {
+  isLoading = state;
+  document.getElementById('send-btn').disabled = state;
+  document.getElementById('chat-input').disabled = state;
+}
+
+async function callAPI(userText) {
+  if (isLoading) return;
+  var apiKey = document.getElementById('inp-apikey').value.trim();
+  if (!apiKey) {
+    addMsg('bot', '<div class="error-msg">' + (L === 'fr' ? '⚠ Clé API manquante. Entrez votre clé Anthropic dans le champ en bas à gauche.' : '⚠ API key missing. Enter your Anthropic key in the field at the bottom left.') + '</div>');
+    return;
+  }
+
+  setLoading(true);
+  chatHistory.push({ role: 'user', content: userText });
+  showTyping();
+
+  try {
+    var res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-calls': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: buildSystemPrompt(),
+        messages: chatHistory
+      })
+    });
+
+    var data = await res.json();
+    removeTyping();
+
+    if (data.error) {
+      addMsg('bot', '<div class="error-msg">⚠ ' + data.error.message + '</div>');
+      chatHistory.pop();
+      setLoading(false);
+      return;
+    }
+
+    var txt = data.content && data.content[0] ? data.content[0].text : '';
+    chatHistory.push({ role: 'assistant', content: txt });
+
+    if (txt.includes('INTAKE_COMPLETE')) {
+      var clean = txt.replace('INTAKE_COMPLETE', '').trim();
+      if (clean) addMsg('bot', clean.replace(/\n/g, '<br>'));
+      setTimeout(showConfirm, 500);
+    } else {
+      addMsg('bot', txt.replace(/\n/g, '<br>'));
+    }
+  } catch(e) {
+    removeTyping();
+    addMsg('bot', '<div class="error-msg">⚠ ' + (L === 'fr' ? 'Erreur de connexion : ' : 'Connection error: ') + e.message + '</div>');
+    chatHistory.pop();
+  }
+
+  setLoading(false);
+  document.getElementById('chat-input').focus();
+}
+
+function showConfirm() {
+  var html = L === 'fr'
+    ? 'Toutes les informations ont été collectées. Confirmez-vous que vos réponses sont exactes?'
+    : 'All information has been collected. Do you confirm your answers are accurate?';
+  html += '<div class="confirm-box"><div class="confirm-btns">'
+    + '<button class="cbtn yes" onclick="confirmGenerate()">' + (L === 'fr' ? 'Oui, générer le contrat' : 'Yes, generate contract') + '</button>'
+    + '<button class="cbtn" onclick="requestCorrection()">' + (L === 'fr' ? 'Corriger une réponse' : 'Correct an answer') + '</button>'
+    + '</div></div>';
+  addMsg('bot', html);
+}
+
+function requestCorrection() {
+  addMsg('bot', L === 'fr' ? 'Bien sûr. Quelle information souhaitez-vous corriger?' : 'Of course. Which information would you like to correct?');
+  document.getElementById('chat-input').focus();
+}
+
+function confirmGenerate() {
+  addMsg('bot', L === 'fr' ? 'Parfait. Génération du document en cours...' : 'Perfect. Generating your document...');
+  setTimeout(buildDoc, 700);
+}
+
+function startIntake() {
+  if (!selC) {
+    alert(L === 'fr' ? 'Veuillez sélectionner un type de contrat.' : 'Please select a contract type.');
+    return;
+  }
+  var apiKey = document.getElementById('inp-apikey').value.trim();
+  if (!apiKey) {
+    alert(L === 'fr' ? 'Veuillez entrer votre clé API Anthropic (sk-ant-...)' : 'Please enter your Anthropic API key (sk-ant-...)');
+    return;
+  }
+
+  var cObj = CONTRACT_TYPES.find(function(c) { return c.k === selC; });
+  document.getElementById('chat-contract-name').textContent = cObj ? (L === 'fr' ? cObj.fr : cObj.en) : selC;
+
+  var tagsEl = document.getElementById('chat-tags');
+  tagsEl.innerHTML = '';
+  selLegs.forEach(function(k) {
+    var l = LEGS.find(function(x) { return x.k === k; });
+    if (l) {
+      var t = document.createElement('div');
+      t.className = 'tag';
+      t.textContent = L === 'fr' ? l.fr : l.en;
+      tagsEl.appendChild(t);
+    }
+  });
+
+  goPanel(1);
+  chatHistory = [];
+
+  var cName = cObj ? (L === 'fr' ? cObj.fr : cObj.en) : selC;
+  var industry = document.getElementById('inp-industry').value;
+  var details = document.getElementById('inp-details').value;
+
+  var initMsg = L === 'fr'
+    ? 'Bonjour. Je veux créer un ' + cName + '. Mon domaine : ' + (industry || 'non précisé') + '. Contexte supplémentaire : ' + (details || 'aucun') + '. Juridiction : Québec.'
+    : 'Hello. I want to create a ' + cName + '. My field: ' + (industry || 'not specified') + '. Additional context: ' + (details || 'none') + '. Jurisdiction: Quebec.';
+
+  callAPI(initMsg);
+}
+
+function handleSend() {
+  var ci = document.getElementById('chat-input');
+  var v = ci.value.trim();
+  if (!v || isLoading) return;
+  addMsg('user', v);
+  ci.value = '';
+  callAPI(v);
+}
+
+// ─────────────────────────────────────────────
+// DOC BUILD
+// ─────────────────────────────────────────────
+function detectNudges() {
+  var context = (document.getElementById('inp-industry').value + ' ' + document.getElementById('inp-details').value).toLowerCase();
+  var found = [];
+  Object.keys(CLAUSE_LIB).forEach(function(k) {
+    if (addedNudges[k]) return;
+    var cl = CLAUSE_LIB[k];
+    if (cl.triggers.some(function(t) { return context.includes(t); })) found.push(k);
+  });
+  return found.slice(0, 7);
+}
+
+function renderNudges() {
+  var nl = document.getElementById('nudge-list');
+  nl.innerHTML = '';
+  var found = detectNudges();
+  found.forEach(function(k) {
+    var cl = CLAUSE_LIB[k];
+    var d = document.createElement('div');
+    var isAdded = !!addedNudges[k];
+    d.className = 'nudge-pill' + (isAdded ? ' added' : '');
+    var name = L === 'fr' ? cl.fr : cl.en;
+    var desc = L === 'fr' ? cl.desc_fr : cl.desc_en;
+    d.innerHTML = '<div class="nudge-pill-name">'
+      + (isAdded ? '✓ ' : '+ ')
+      + name
+      + '</div><div class="nudge-pill-desc">' + desc + '</div>';
+    if (!isAdded) {
+      d.onclick = (function(key) { return function() { addClause(key); }; })(k);
+    }
+    nl.appendChild(d);
+  });
+  if (found.length === 0) {
+    nl.innerHTML = '<p style="font-size:11px;color:var(--text-tertiary);line-height:1.5">'
+      + (L === 'fr' ? 'Toutes les clauses suggérées ont été ajoutées.' : 'All suggested clauses have been added.')
+      + '</p>';
+  }
+}
+
+function addClause(k) {
+  addedNudges[k] = true;
+  var cl = CLAUSE_LIB[k];
+  var name = L === 'fr' ? cl.fr : cl.en;
+  var desc = L === 'fr' ? cl.desc_fr : cl.desc_en;
+  var dm = document.getElementById('doc-main');
+  var disc = dm.querySelector('.doc-disclaimer');
+  var html = '<div class="doc-clause-added">'
+    + '<p style="font-size:12px;font-weight:700;margin-bottom:4px">' + name + '</p>'
+    + '<p style="font-size:13px;color:var(--text-secondary)">' + desc + ' <em style="color:var(--text-tertiary)">[À compléter avec les parties]</em></p>'
+    + '</div>';
+  if (disc) disc.insertAdjacentHTML('beforebegin', html);
+  else dm.innerHTML += html;
+  renderNudges();
+}
+
+function buildDoc() {
+  var cObj = CONTRACT_TYPES.find(function(c) { return c.k === selC; });
+  var cName = cObj ? (L === 'fr' ? cObj.fr : cObj.en) : selC;
+  var qc = QC_DEFAULTS[selC] || QC_DEFAULTS.service;
+  var legNames = selLegs.map(function(k) {
+    var l = LEGS.find(function(x) { return x.k === k; });
+    return l ? (L === 'fr' ? l.fr : l.en) : k;
+  }).join(' · ') || (L === 'fr' ? 'Code civil du Québec' : 'Quebec Civil Code');
+
+  var details = document.getElementById('inp-details').value;
+  var qaHtml = '';
+  for (var i = 0; i < chatHistory.length; i++) {
+    var msg = chatHistory[i];
+    if (msg.role === 'user' && i > 0) {
+      var prev = chatHistory[i - 1];
+      var question = prev && prev.role === 'assistant' ? prev.content.replace(/<[^>]+>/g, '').split('\n')[0] : '';
+      qaHtml += '<div class="doc-qa">'
+        + (question ? '<div class="doc-qa-q">' + question.substring(0, 120) + '</div>' : '')
+        + '<div class="doc-qa-a">' + msg.content + '</div>'
+        + '</div>';
+    }
+  }
+
+  var html = '';
+  html += '<div class="doc-watermark">' + cName.toUpperCase() + ' · PROJET · ' + new Date().toLocaleDateString(L === 'fr' ? 'fr-CA' : 'en-CA') + '</div>';
+  html += '<div class="doc-title">' + cName + '</div>';
+  html += '<div class="doc-meta">' + legNames + '</div>';
+  html += '<hr class="doc-divider">';
+
+  if (details) {
+    html += '<div class="doc-section-title">' + (L === 'fr' ? 'Contexte fourni' : 'Provided context') + '</div>';
+    html += '<p style="margin-bottom:16px;font-size:13px"><span class="doc-highlight">' + details + '</span></p>';
+    html += '<hr class="doc-divider">';
+  }
+
+  html += '<div class="doc-section-title">1. ' + (L === 'fr' ? 'Informations collectées' : 'Collected information') + '</div>';
+  html += qaHtml || '<p style="font-size:13px;color:var(--text-tertiary)">[—]</p>';
+  html += '<hr class="doc-divider">';
+
+  html += '<div class="doc-section-title">2. ' + (L === 'fr' ? 'Juridiction & droit applicable' : 'Jurisdiction & governing law') + '</div>';
+  html += '<p style="font-size:13px;margin-bottom:6px">' + qc.jur + '</p>';
+  html += '<p style="font-size:13px;margin-bottom:6px">' + qc.law + '</p>';
+  if (qc.labour) html += '<p style="font-size:13px;margin-bottom:6px">' + qc.labour + '</p>';
+  if (qc.pipeda) html += '<p style="font-size:13px;margin-bottom:6px">' + qc.pipeda + '</p>';
+  if (qc.consumer) html += '<p style="font-size:13px;margin-bottom:6px">' + qc.consumer + '</p>';
+  if (qc.note) html += '<div class="doc-qc-note">⚠ ' + qc.note + '</div>';
+  html += '<hr class="doc-divider">';
+
+  html += '<div class="doc-section-title">3. ' + (L === 'fr' ? 'Clauses principales' : 'Main clauses') + '</div>';
+  html += '<p style="font-size:13px;color:var(--text-tertiary);margin-bottom:8px;font-style:italic">'
+    + (L === 'fr' ? 'Ajoutez des clauses via le panneau de suggestions →' : 'Add clauses via the suggestions panel →')
+    + '</p>';
+  html += '<hr class="doc-divider">';
+
+  html += '<div class="doc-section-title">4. ' + (L === 'fr' ? 'Signatures' : 'Signatures') + '</div>';
+  html += '<div class="sig-grid">';
+  html += '<div class="sig-block"><div class="sig-label">' + (L === 'fr' ? 'Partie 1' : 'Party 1') + '</div><div class="sig-line">' + (L === 'fr' ? 'Signature & date' : 'Signature & date') + '</div></div>';
+  html += '<div class="sig-block"><div class="sig-label">' + (L === 'fr' ? 'Partie 2' : 'Party 2') + '</div><div class="sig-line">' + (L === 'fr' ? 'Signature & date' : 'Signature & date') + '</div></div>';
+  html += '</div>';
+
+  html += '<div class="doc-disclaimer">⚠ '
+    + (L === 'fr'
+      ? 'Ce document est un projet structuré généré par un système d\'IA. Il ne constitue pas un avis juridique. Faites-le réviser par un avocat qualifié avant toute signature.'
+      : 'This document is a structured draft generated by an AI system. It does not constitute legal advice. Have it reviewed by a qualified lawyer before signing.')
+    + '</div>';
+
+  document.getElementById('doc-main').innerHTML = html;
+  addedNudges = {};
+  renderNudges();
+  goPanel(2);
+}
+
+function doTranslate() {
+  L = L === 'fr' ? 'en' : 'fr';
+  applyLang();
+  buildDoc();
+}
+
+function doExport() {
+  var content = document.getElementById('doc-main').innerText;
+  var blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'LexAI-contrat-' + new Date().toISOString().slice(0,10) + '.txt';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ─────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────
+applyLang();
+</script>
+</body>
+</html>

@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LexAI — Agent juridique québécois</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#F7F5F0;--surface:#FFF;--border:#E4E0D8;--border-soft:#EDE9E2;
+    --text:#1C1917;--t2:#78716C;--t3:#A8A29E;--accent:#1C1917;--accent2:#292524;
+    --green:#15803D;--green-bg:#F0FDF4;--green-bd:#86EFAC;
+    --blue:#1E40AF;--blue-bg:#EFF6FF;--blue-bd:#93C5FD;
+    --amber:#92400E;--amber-bg:#FFFBEB;--amber-bd:#FCD34D;
+    --red:#991B1B;--red-bg:#FEF2F2;--red-bd:#FECACA;
+    --serif:'DM Serif Display',Georgia,serif;--sans:'DM Sans',system-ui,sans-serif;
+    --r:10px;--rsm:6px;--sh:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14px;-webkit-font-smoothing:antialiased}
+  .app{display:flex;height:100vh;overflow:hidden}
+  .sb{width:220px;min-width:220px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column}
+  .sb-brand{padding:20px 18px 14px;border-bottom:1px solid var(--border-soft)}
+  .sb-brand-name{font-family:var(--serif);font-size:24px;line-height:1}
+  .sb-brand-name em{font-style:italic;color:var(--t2)}
+  .sb-brand-sub{font-size:10px;color:var(--t3);margin-top:3px;letter-spacing:.08em;text-transform:uppercase}
+  .sb-steps{padding:14px 10px;flex:1}
+  .stp{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--rsm);margin-bottom:2px}
+  .stp.cur{background:var(--bg)}
+  .stp-n{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--t3);flex-shrink:0;transition:all .2s}
+  .stp-n.done{background:var(--green);border-color:var(--green);color:#fff}
+  .stp-n.act{background:var(--accent);border-color:var(--accent);color:#fff}
+  .stp-l{font-size:12px;color:var(--t2)}
+  .stp.cur .stp-l{color:var(--text);font-weight:500}
+  .sb-foot{padding:14px 16px;border-top:1px solid var(--border-soft)}
+  .sb-disc{font-size:10px;color:var(--t3);line-height:1.5;margin-top:8px}
+  .lang-tog{display:flex;background:var(--bg);border-radius:var(--rsm);padding:3px;border:1px solid var(--border)}
+  .lo{flex:1;padding:5px 8px;border-radius:5px;font-size:11px;font-weight:600;text-align:center;cursor:pointer;color:var(--t2);transition:all .15s;border:none;background:none;font-family:var(--sans)}
+  .lo.on{background:var(--surface);color:var(--text);box-shadow:var(--sh)}
+  .main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+  .prog{height:2px;background:var(--border-soft);flex-shrink:0}
+  .prog-fill{height:100%;background:var(--accent);transition:width .4s}
+  .panel{display:none;flex:1;flex-direction:column;overflow:hidden}
+  .panel.on{display:flex}
+  .s1-body{flex:1;overflow-y:auto;padding:28px 32px}
+  .s1-title{font-family:var(--serif);font-size:26px;margin-bottom:5px}
+  .s1-sub{font-size:13px;color:var(--t2);line-height:1.6;margin-bottom:28px}
+  .fgrp{margin-bottom:24px}
+  .flbl{font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:9px}
+  .fhint{font-size:12px;color:var(--t3);line-height:1.55;margin-bottom:8px}
+  .ct-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .cpill{padding:11px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:13px;color:var(--t2);cursor:pointer;background:var(--surface);transition:all .15s;font-family:var(--sans);text-align:left;line-height:1.3}
+  .cpill:hover{border-color:#C5BFB5;color:var(--text)}
+  .cpill.sel{border-color:var(--accent);border-width:2px;color:var(--text);font-weight:600;background:var(--bg)}
+  input[type=text],textarea{width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:var(--r);font-size:13px;font-family:var(--sans);color:var(--text);background:var(--surface);resize:vertical;outline:none;transition:border-color .15s;line-height:1.5}
+  input[type=text]:focus,textarea:focus{border-color:#A09890}
+  .s1-foot{padding:16px 32px;border-top:1px solid var(--border-soft);display:flex;justify-content:flex-end;background:var(--surface);flex-shrink:0}
+  .btn{padding:10px 22px;border-radius:var(--r);font-size:13px;font-weight:600;cursor:pointer;border:1.5px solid var(--border);background:var(--surface);color:var(--text);transition:all .15s;font-family:var(--sans);white-space:nowrap}
+  .btn:hover{background:var(--bg)}
+  .btn.pri{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .btn.pri:hover{background:var(--accent2)}
+  .btn.sm{padding:7px 14px;font-size:12px}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+  .chat-hd{padding:14px 24px;border-bottom:1px solid var(--border-soft);background:var(--surface);flex-shrink:0}
+  .chat-hd-name{font-family:var(--serif);font-size:17px}
+  .chat-hd-sub{font-size:11px;color:var(--t3);margin-top:2px}
+  .chat-msgs{flex:1;overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:14px}
+  .msg{max-width:82%}
+  .msg.bot{align-self:flex-start}
+  .msg.user{align-self:flex-end}
+  .msg-name{font-size:10px;color:var(--t3);margin-bottom:4px;letter-spacing:.03em}
+  .mbub{padding:12px 15px;border-radius:12px;font-size:13px;line-height:1.65}
+  .msg.bot .mbub{background:var(--surface);color:var(--text);border:1px solid var(--border-soft);border-radius:3px 12px 12px 12px;box-shadow:var(--sh)}
+  .msg.user .mbub{background:var(--accent);color:#fff;border-radius:12px 3px 12px 12px}
+  .chat-inp-row{padding:14px 24px;border-top:1px solid var(--border-soft);display:flex;gap:10px;background:var(--surface);flex-shrink:0}
+  .chat-inp{flex:1;padding:11px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:13px;font-family:var(--sans);color:var(--text);background:var(--bg);outline:none;transition:border-color .15s}
+  .chat-inp:focus{border-color:#A09890;background:var(--surface)}
+  .send-btn{padding:11px 16px;background:var(--accent);color:#fff;border:none;border-radius:var(--r);font-size:16px;cursor:pointer}
+  .send-btn:hover{background:var(--accent2)}
+  .send-btn:disabled{opacity:.4;cursor:not-allowed}
+  .dots{display:inline-flex;gap:4px;align-items:center}
+  .dots span{width:5px;height:5px;border-radius:50%;background:var(--t3);animation:boun 1.3s infinite}
+  .dots span:nth-child(2){animation-delay:.18s}
+  .dots span:nth-child(3){animation-delay:.36s}
+  @keyframes boun{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-5px)}}
+  .conf-box{margin-top:10px;padding:12px 14px;background:var(--bg);border:1px solid var(--border);border-radius:var(--r)}
+  .conf-btns{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+  .cbtn{padding:8px 16px;border-radius:var(--rsm);font-size:12px;font-weight:600;cursor:pointer;border:1.5px solid var(--border);background:var(--surface);color:var(--text);font-family:var(--sans);transition:all .15s}
+  .cbtn:hover{background:var(--bg)}
+  .cbtn.yes{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .doc-wrap{display:flex;flex:1;overflow:hidden}
+  .doc-main{flex:1;overflow-y:auto;padding:36px 44px;background:var(--surface);font-size:13px;line-height:1.9}
+  .doc-side{width:250px;min-width:250px;border-left:1px solid var(--border);display:flex;flex-direction:column;background:var(--bg)}
+  .ds-hd{padding:14px 16px;border-bottom:1px solid var(--border-soft);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--t3)}
+  .ds-body{padding:12px 14px;flex:1;overflow-y:auto}
+  .npill{padding:10px 12px;border:1px solid var(--blue-bd);border-radius:var(--r);background:var(--blue-bg);cursor:pointer;margin-bottom:8px;font-size:11px;color:var(--blue);line-height:1.5;transition:all .15s}
+  .npill:hover{background:#DBEAFE}
+  .npill.added{background:var(--green-bg);border-color:var(--green-bd);color:var(--green);cursor:default}
+  .npill-name{font-weight:700;margin-bottom:2px}
+  .npill-desc{font-size:10px;opacity:.85;line-height:1.4}
+  .ds-ft{padding:12px 14px;border-top:1px solid var(--border-soft);display:flex;flex-direction:column;gap:7px;background:var(--surface)}
+  .doc-wm{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:18px}
+  .doc-title{font-family:var(--serif);font-size:22px;margin-bottom:6px}
+  .doc-meta{font-size:11px;color:var(--t3);margin-bottom:22px}
+  .doc-hr{border:none;border-top:1px solid var(--border-soft);margin:16px 0}
+  .doc-sec{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);margin-bottom:12px}
+  .doc-hl{background:#FEF3C7;border-radius:3px;padding:2px 5px;color:var(--amber);font-weight:500}
+  .doc-cl{border-left:2px solid var(--green);padding-left:14px;margin:12px 0}
+  .doc-qa{margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--border-soft)}
+  .doc-qa-q{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px}
+  .doc-qc{padding:10px 14px;background:var(--amber-bg);border:1px solid var(--amber-bd);border-radius:var(--rsm);font-size:12px;color:var(--amber);line-height:1.5;margin-bottom:8px}
+  .doc-disc{margin-top:28px;padding:14px 16px;background:var(--amber-bg);border:1px solid var(--amber-bd);border-radius:var(--r);font-size:11px;color:var(--amber);line-height:1.6}
+  .sig-grid{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-top:16px}
+  .sig-line{margin-top:36px;border-top:1px solid var(--border);padding-top:6px;font-size:11px;color:var(--t3)}
+  .err{padding:10px 14px;background:var(--red-bg);border:1px solid var(--red-bd);border-radius:var(--rsm);font-size:12px;color:var(--red);line-height:1.5}
+  ::-webkit-scrollbar{width:4px}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="sb">
+    <div class="sb-brand">
+      <div class="sb-brand-name">Lex<em>AI</em></div>
+      <div class="sb-brand-sub">Agent juridique · Québec</div>
+    </div>
+    <div class="sb-steps" id="sb-steps"></div>
+    <div class="sb-foot">
+      <div class="lang-tog">
+        <button class="lo on" id="opt-fr" onclick="setLang('fr')">Français</button>
+        <button class="lo" id="opt-en" onclick="setLang('en')">English</button>
+      </div>
+      <div class="sb-disc" id="sb-disc">Agent structuré · non un avocat</div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="prog"><div class="prog-fill" id="prog" style="width:33%"></div></div>
+
+    <div class="panel on" id="p0">
+      <div class="s1-body">
+        <div class="s1-title" id="t-title">Votre contrat</div>
+        <div class="s1-sub" id="t-sub">Dites-nous ce dont vous avez besoin. L'agent s'adapte à votre situation et secteur.</div>
+        <div class="fgrp">
+          <div class="flbl" id="t-lct">Type de contrat</div>
+          <div class="ct-grid" id="ct-grid"></div>
+        </div>
+        <div class="fgrp">
+          <div class="flbl" id="t-lind">Votre domaine ou secteur</div>
+          <input type="text" id="inp-ind" placeholder="Ex. : créateur TikTok, consultant tech, tuteur de maths, agence de design..." />
+        </div>
+        <div class="fgrp">
+          <div class="flbl" id="t-ldet">Parlez-nous de votre situation</div>
+          <div class="fhint" id="t-hint">Êtes-vous une entreprise ou un particulier? Avez-vous déjà une relation avec l'autre partie? Des éléments importants à inclure?</div>
+          <textarea id="inp-det" rows="3" placeholder="Ex. : je travaille avec une marque pour 3 publications sponsorisées par mois, ils veulent aussi diffuser mes vidéos en publicité payante sur Meta..."></textarea>
+        </div>
+      </div>
+      <div class="s1-foot">
+        <button class="btn pri" id="btn-start" onclick="startIntake()">Démarrer →</button>
+      </div>
+    </div>
+
+    <div class="panel" id="p1">
+      <div class="chat-hd">
+        <div class="chat-hd-name" id="chat-name">—</div>
+        <div class="chat-hd-sub" id="t-chat-sub">Agent juridique IA · collecte structurée</div>
+      </div>
+      <div class="chat-msgs" id="chat-msgs"></div>
+      <div class="chat-inp-row">
+        <input class="chat-inp" id="chat-inp" placeholder="Votre réponse..."
+          onkeydown="if(event.key==='Enter')handleSend()" />
+        <button class="send-btn" id="send-btn" onclick="handleSend()">↑</button>
+      </div>
+    </div>
+
+    <div class="panel" id="p2">
+      <div class="doc-wrap">
+        <div class="doc-main" id="doc-main"></div>
+        <div class="doc-side">
+          <div class="ds-hd" id="t-nudge-hd">Clauses suggérées</div>
+          <div class="ds-body" id="nudge-list"></div>
+          <div class="ds-ft">
+            <button class="btn sm" id="btn-tr" onclick="doTranslate()">Traduire en anglais</button>
+            <button class="btn sm pri" onclick="doExport()">Exporter ↗</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── REPLACE THIS WITH YOUR REAL KEY ──
+var API_KEY = 'YOUR_API_KEY_HERE';
+// ─────────────────────────────────────
+
+var L='fr',step=0,selC='',chatHistory=[],addedNudges={},busy=false;
+
+var CTS=[
+  {fr:'Contrat de travail',en:'Employment contract',k:'employment'},
+  {fr:'Entrepreneur indépendant',en:'Independent contractor',k:'contractor'},
+  {fr:'NDA',en:'NDA',k:'nda'},
+  {fr:'Politique de confidentialité',en:'Privacy policy',k:'privacy'},
+  {fr:'Non-concurrence / Non-sollicitation',en:'Non-compete / Non-solicit',k:'noncompete'},
+  {fr:"Lettre d'intention",en:'Letter of intent',k:'loi'},
+  {fr:'Conditions générales',en:'Terms & conditions',k:'tnc'},
+  {fr:'Contrat de services',en:'Service agreement',k:'service'}
+];
+
+var CL={
+  usage_rights:{fr:"Droits d'utilisation",en:"Usage rights",df:"Limite l'usage du contenu aux fins convenues uniquement.",de:"Limits content use to agreed purposes only.",t:['influenc','tiktok','content','créateur','creator','ugc','brand','marque','vidéo','video','photo','publicité','advertising','instagram','youtube','social']},
+  whitelisting:{fr:"Droits de diffusion (whitelisting)",en:"Whitelisting rights",df:"Encadre la diffusion payante via le compte du créateur.",de:"Governs paid promotion through the creator's social account.",t:['influenc','tiktok','instagram','youtube','content','creator','ugc','brand','pub payante','paid ad','whitelist']},
+  likeness_rights:{fr:"Droits à l'image",en:"Likeness rights",df:"Limite l'utilisation de l'image et du nom aux supports convenus.",de:"Limits use of image and name to expressly agreed media.",t:['influenc','tiktok','creator','ugc','photo','vidéo','video','model','mannequin','image']},
+  exclusivity:{fr:"Exclusivité sectorielle",en:"Category exclusivity",df:"Interdit la collaboration avec des marques concurrentes pendant la période.",de:"Prohibits working with competing brands during the agreed period.",t:['influenc','content','creator','brand','marque','ugc','exclusiv']},
+  content_approval:{fr:"Approbation du contenu",en:"Content approval process",df:"Définit les rondes de révision et délais avant publication.",de:"Defines revision rounds and approval deadlines before publishing.",t:['influenc','content','creator','ugc','brand','marque','agence','design','vidéo','video']},
+  ip_assignment:{fr:"Cession de propriété intellectuelle",en:"IP assignment",df:"Transfère tous les livrables en pleine propriété au client après paiement.",de:"Transfers all deliverables to client upon full payment.",t:['tech','développeur','developer','logiciel','software','design','agence','agency','consultant','app','saas']},
+  source_code:{fr:"Propriété du code source",en:"Source code ownership",df:"Le code source reste la propriété exclusive du client après livraison.",de:"Source code remains client's exclusive property after delivery.",t:['tech','développeur','developer','logiciel','software','saas','app','programmeur','code']},
+  session_cancel:{fr:"Politique d'annulation de séance",en:"Session cancellation policy",df:"Définit les frais d'annulation selon le délai de préavis.",de:"Defines cancellation fees based on notice period given.",t:['tuteur','tutor','coach','formateur','trainer','mentor','cours','lesson','class','enseignant','prof','séance']},
+  materials_ip:{fr:"Propriété des supports créés",en:"Educational materials IP",df:"Les matériaux pédagogiques restent la propriété du prestataire.",de:"Educational materials remain the provider's intellectual property.",t:['tuteur','tutor','coach','formateur','trainer','cours','lesson','formation','enseignant','prof']},
+  no_employee:{fr:"Absence de lien de subordination",en:"No employment relationship",df:"Confirme qu'aucun lien d'emploi n'est créé par ce contrat.",de:"Confirms no employment relationship is created by this contract.",t:['contractor','indépendant','freelance','consultant','tuteur','tutor','coach','pigiste']},
+  data_breach:{fr:"Notification de violation de données",en:"Data breach notification",df:"Oblige à notifier les autorités dans les 72h en cas de fuite.",de:"Requires notifying authorities within 72h of a data breach.",t:['privacy','données','data','rgpd','gdpr','loi 25','pipeda','tech','saas','app','numérique']},
+  right_erasure:{fr:"Droit à l'effacement",en:"Right to erasure",df:"Les utilisateurs peuvent demander la suppression de leurs données.",de:"Users can request deletion of their personal data.",t:['privacy','données','data','rgpd','gdpr','loi 25','consommateur']},
+  change_orders:{fr:"Gestion des avenants",en:"Change order management",df:"Toute modification de portée doit être approuvée par écrit.",de:"Any scope change requires a written amendment by both parties.",t:['service','agence','agency','construction','rénovation','consultant','design','projet']},
+  liability_cap:{fr:"Plafond de responsabilité",en:"Liability cap",df:"Limite la responsabilité totale au montant des honoraires reçus.",de:"Caps total liability to fees received under this contract.",t:['service','agence','agency','consultant','tech','saas','développeur','contractor']},
+  force_majeure:{fr:"Force majeure",en:"Force majeure",df:"Exclut la responsabilité en cas d'événement imprévisible et irrésistible.",de:"Excludes liability for unforeseeable and unavoidable events.",t:['employment','service','contractor','tnc','loi','construction','international']},
+  non_solicit:{fr:"Non-sollicitation de la clientèle",en:"Non-solicitation of clients",df:"Interdit le démarchage des clients de l'autre partie après le contrat.",de:"Prohibits soliciting the other party's clients after contract ends.",t:['service','agence','consultant','contractor','indépendant','freelance']}
+};
+
+var QC={
+  employment:{law:'Code civil du Québec, RLRQ c CCQ-1991',labour:'Loi sur les normes du travail, RLRQ c N-1.1',jur:'Province de Québec'},
+  contractor:{law:'Code civil du Québec, RLRQ c CCQ-1991',jur:'Province de Québec',note:'Entrepreneur indépendant — aucun lien de subordination (art. 2085 C.c.Q.)'},
+  nda:{law:'Code civil du Québec, RLRQ c CCQ-1991',jur:'Province de Québec'},
+  privacy:{law:'Loi 25, RLRQ c P-39.1',pipeda:'LPRPDE, LC 2000, c 5',jur:'Province de Québec'},
+  noncompete:{law:'Code civil du Québec, RLRQ c CCQ-1991',jur:'Province de Québec',note:'Durée recommandée : max 12 mois (art. 2089 C.c.Q.)'},
+  loi:{law:'Code civil du Québec, RLRQ c CCQ-1991',jur:'Province de Québec',note:'Ce document ne constitue pas un engagement ferme.'},
+  tnc:{law:'Code civil du Québec, RLRQ c CCQ-1991',consumer:'Loi sur la protection du consommateur, RLRQ c P-40.1',jur:'Province de Québec'},
+  service:{law:'Code civil du Québec, RLRQ c CCQ-1991',jur:'Province de Québec'}
+};
+
+function buildSys(){
+  var cObj=CTS.find(function(c){return c.k===selC;});
+  var cName=cObj?cObj.fr:selC;
+  var ind=document.getElementById('inp-ind').value||'non précisé';
+  var det=document.getElementById('inp-det').value||'aucun';
+  var qc=QC[selC]||QC.service;
+  var rl=L==='fr'?'French':'English';
+  var deflect=L==='fr'?'Cette question dépasse mon rôle. Consultez un avocat qualifié.':'That question is outside my scope. Please consult a qualified lawyer.';
+  return [
+    'You are a structured legal document intake system for Quebec business contracts.',
+    'You are a FORM ENGINE — NOT a legal advisor and NOT a general assistant.',
+    'LANGUAGE: Always respond entirely in '+rl+'.',
+    '',
+    'ABSOLUTE RULES — NEVER BREAK:',
+    '1. Ask EXACTLY ONE question per message. Never combine two questions.',
+    '2. Keep every response under 3 sentences.',
+    '3. After user answers, acknowledge in ONE sentence, then ask the next question.',
+    '4. NEVER cite or invent legal statutes not listed in this prompt.',
+    '5. NEVER give legal opinions. If asked: "'+deflect+'"',
+    '6. NEVER generate a contract draft.',
+    '7. Gap analysis format ONLY: "Clause suggérée : [name] — [1 sentence]"',
+    '8. When done, output exactly: INTAKE_COMPLETE',
+    '',
+    'INDUSTRY SIGNAL DETECTION:',
+    '- Creator/influencer (tiktok, ugc, content, instagram, youtube, brand, pub payante): Ask about deliverable count, content approval rounds, whitelisting permission, brand exclusivity, usage duration and territory.',
+    '- Tech/developer (dev, software, saas, app, logiciel): Ask about source code ownership, API rights, bug warranty.',
+    '- Education/coaching (tutor, coach, trainer, teacher, cours, séance): Ask about cancellation policy, materials ownership, online vs in-person.',
+    '- Music/artist (music, artist, label, sync): Ask about master vs publishing rights, royalties, credits.',
+    '- Construction/renovation: Ask about warranty period, defect liability, materials.',
+    '- Agency/consultant (agence, consultant): Ask about deliverable acceptance, change orders, IP.',
+    '- Default: Standard questions for the contract type.',
+    '',
+    'WORKFLOW:',
+    'STAGE 1: ONE sentence confirming contract type, Quebec jurisdiction, detected context.',
+    'STAGE 2: Collect ONE at a time — names/roles, purpose/scope, duration, compensation, confidentiality, IP ownership (adapt to industry), termination/notice, dispute resolution, industry-specific questions.',
+    'STAGE 3: Output 3–5 clause suggestions in specified format only.',
+    'STAGE 4: Output: INTAKE_COMPLETE',
+    '',
+    'CONTRACT: '+cName,
+    'INDUSTRY: '+ind,
+    'DETAILS: '+det,
+    'QC DEFAULTS: '+JSON.stringify(qc)
+  ].join('\n');
+}
+
+function renderNav(){
+  var labs=L==='fr'?['Paramètres','Collecte & analyse','Révision & export']:['Parameters','Intake & analysis','Review & export'];
+  var el=document.getElementById('sb-steps'); el.innerHTML='';
+  labs.forEach(function(s,i){
+    var r=document.createElement('div'); r.className='stp'+(i===step?' cur':'');
+    var n=document.createElement('div'); n.className='stp-n'+(i<step?' done':i===step?' act':'');
+    n.textContent=i<step?'✓':(i+1);
+    var l=document.createElement('div'); l.className='stp-l'; l.textContent=s;
+    r.appendChild(n); r.appendChild(l); el.appendChild(r);
+  });
+  document.getElementById('prog').style.width=[33,66,100][step]+'%';
+}
+
+function renderCT(){
+  var g=document.getElementById('ct-grid'); g.innerHTML='';
+  CTS.forEach(function(c){
+    var d=document.createElement('button');
+    d.className='cpill'+(selC===c.k?' sel':'');
+    d.textContent=L==='fr'?c.fr:c.en;
+    d.onclick=(function(k){return function(){selC=k;renderCT();};})(c.k);
+    g.appendChild(d);
+  });
+}
+
+function applyLang(){
+  var fr=L==='fr';
+  document.getElementById('opt-fr').classList.toggle('on',fr);
+  document.getElementById('opt-en').classList.toggle('on',!fr);
+  document.getElementById('t-title').textContent=fr?'Votre contrat':'Your contract';
+  document.getElementById('t-sub').textContent=fr?"Dites-nous ce dont vous avez besoin. L'agent s'adapte à votre situation et secteur.":"Tell us what you need. The agent adapts to your situation and industry.";
+  document.getElementById('t-lct').textContent=fr?'Type de contrat':'Contract type';
+  document.getElementById('t-lind').textContent=fr?'Votre domaine ou secteur':'Your field or industry';
+  document.getElementById('t-ldet').textContent=fr?'Parlez-nous de votre situation':'Tell us about your situation';
+  document.getElementById('t-hint').textContent=fr?"Êtes-vous une entreprise ou un particulier? Avez-vous déjà une relation avec l'autre partie? Des éléments importants?":"Are you a business or individual? Do you already have a relationship with the other party? Any important details?";
+  document.getElementById('inp-ind').placeholder=fr?"Ex. : créateur TikTok, consultant tech, tuteur de maths, agence de design...":"E.g. TikTok creator, tech consultant, math tutor, design agency...";
+  document.getElementById('inp-det').placeholder=fr?"Ex. : je travaille avec une marque pour 3 publications sponsorisées, ils veulent aussi diffuser mes vidéos en pub payante...":"E.g. I work with a brand for 3 sponsored posts, they also want to run my videos as paid ads...";
+  document.getElementById('btn-start').textContent=fr?'Démarrer →':'Start →';
+  document.getElementById('t-chat-sub').textContent=fr?'Agent juridique IA · collecte structurée':'AI Legal Agent · structured intake';
+  document.getElementById('t-nudge-hd').textContent=fr?'Clauses suggérées':'Suggested clauses';
+  document.getElementById('btn-tr').textContent=fr?'Traduire en anglais':'Traduire en français';
+  document.getElementById('sb-disc').textContent=fr?'Agent structuré · non un avocat':'Structured agent · not a lawyer';
+  document.getElementById('chat-inp').placeholder=fr?'Votre réponse...':'Your reply...';
+  renderCT(); renderNav();
+}
+
+function setLang(l){L=l;applyLang();}
+
+function goPanel(n){
+  step=n;
+  ['p0','p1','p2'].forEach(function(id,i){document.getElementById(id).classList.toggle('on',i===n);});
+  renderNav();
+}
+
+function addMsg(role,html){
+  var ca=document.getElementById('chat-msgs');
+  var m=document.createElement('div'); m.className='msg '+role;
+  if(role==='bot'){var nm=document.createElement('div');nm.className='msg-name';nm.textContent=L==='fr'?'Agent juridique':'Legal Agent';m.appendChild(nm);}
+  var b=document.createElement('div'); b.className='mbub'; b.innerHTML=html;
+  m.appendChild(b); ca.appendChild(m); ca.scrollTop=ca.scrollHeight;
+}
+
+function showTyping(){
+  var ca=document.getElementById('chat-msgs'); removeTyping();
+  var m=document.createElement('div'); m.className='msg bot'; m.id='typ';
+  var nm=document.createElement('div'); nm.className='msg-name'; nm.textContent=L==='fr'?'Agent juridique':'Legal Agent';
+  var b=document.createElement('div'); b.className='mbub'; b.innerHTML='<div class="dots"><span></span><span></span><span></span></div>';
+  m.appendChild(nm); m.appendChild(b); ca.appendChild(m); ca.scrollTop=ca.scrollHeight;
+}
+function removeTyping(){var t=document.getElementById('typ');if(t)t.remove();}
+function setBusy(v){busy=v;document.getElementById('send-btn').disabled=v;document.getElementById('chat-inp').disabled=v;}
+
+async function callAPI(userText){
+  if(busy)return;
+  setBusy(true); chatHistory.push({role:'user',content:userText}); showTyping();
+  try{
+    var res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':API_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-calls':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,system:buildSys(),messages:chatHistory})
+    });
+    var data=await res.json(); removeTyping();
+    if(data.error){addMsg('bot','<div class="err">⚠ '+data.error.message+'</div>');chatHistory.pop();setBusy(false);return;}
+    var txt=data.content&&data.content[0]?data.content[0].text:'';
+    chatHistory.push({role:'assistant',content:txt});
+    if(txt.includes('INTAKE_COMPLETE')){
+      var clean=txt.replace('INTAKE_COMPLETE','').trim();
+      if(clean)addMsg('bot',clean.replace(/\n/g,'<br>'));
+      setTimeout(showConfirm,500);
+    }else{addMsg('bot',txt.replace(/\n/g,'<br>'));}
+  }catch(e){
+    removeTyping();
+    addMsg('bot','<div class="err">⚠ '+(L==='fr'?'Erreur : ':'Error: ')+e.message+'</div>');
+    chatHistory.pop();
+  }
+  setBusy(false); document.getElementById('chat-inp').focus();
+}
+
+function showConfirm(){
+  var html=(L==='fr'?'Toutes les informations ont été collectées. Confirmez-vous que vos réponses sont exactes?':'All information collected. Do you confirm your answers are accurate?')
+    +'<div class="conf-box"><div class="conf-btns">'
+    +'<button class="cbtn yes" onclick="doGenerate()">'+(L==='fr'?'Oui, générer le contrat':'Yes, generate contract')+'</button>'
+    +'<button class="cbtn" onclick="doCorrect()">'+(L==='fr'?'Corriger une réponse':'Correct an answer')+'</button>'
+    +'</div></div>';
+  addMsg('bot',html);
+}
+function doCorrect(){addMsg('bot',L==='fr'?'Bien sûr. Quelle information souhaitez-vous corriger?':'Of course. Which answer would you like to correct?');document.getElementById('chat-inp').focus();}
+function doGenerate(){addMsg('bot',L==='fr'?'Parfait. Génération du document en cours...':'Perfect. Generating your document...');setTimeout(buildDoc,700);}
+
+function startIntake(){
+  if(!selC){alert(L==='fr'?'Veuillez sélectionner un type de contrat.':'Please select a contract type.');return;}
+  var cObj=CTS.find(function(c){return c.k===selC;});
+  document.getElementById('chat-name').textContent=cObj?(L==='fr'?cObj.fr:cObj.en):selC;
+  goPanel(1); chatHistory=[];
+  var cName=cObj?(L==='fr'?cObj.fr:cObj.en):selC;
+  var ind=document.getElementById('inp-ind').value;
+  var det=document.getElementById('inp-det').value;
+  callAPI(L==='fr'
+    ?'Bonjour. Je veux créer un '+cName+'. Mon domaine : '+(ind||'non précisé')+'. Contexte : '+(det||'aucun')+'. Juridiction : Québec.'
+    :'Hello. I want to create a '+cName+'. My field: '+(ind||'not specified')+'. Context: '+(det||'none')+'. Jurisdiction: Quebec.');
+}
+
+function handleSend(){
+  var ci=document.getElementById('chat-inp');
+  var v=ci.value.trim(); if(!v||busy)return;
+  addMsg('user',v); ci.value=''; callAPI(v);
+}
+
+function detectNudges(){
+  var ctx=(document.getElementById('inp-ind').value+' '+document.getElementById('inp-det').value).toLowerCase();
+  return Object.keys(CL).filter(function(k){return !addedNudges[k]&&CL[k].t.some(function(t){return ctx.includes(t);});}).slice(0,7);
+}
+
+function renderNudges(){
+  var nl=document.getElementById('nudge-list'); nl.innerHTML='';
+  var found=detectNudges();
+  found.forEach(function(k){
+    var cl=CL[k]; var d=document.createElement('div'); d.className='npill';
+    d.innerHTML='<div class="npill-name">+ '+(L==='fr'?cl.fr:cl.en)+'</div><div class="npill-desc">'+(L==='fr'?cl.df:cl.de)+'</div>';
+    d.onclick=(function(key){return function(){addClause(key);};})(k);
+    nl.appendChild(d);
+  });
+  if(!found.length) nl.innerHTML='<p style="font-size:11px;color:var(--t3);line-height:1.5">'+(L==='fr'?'Toutes les clauses suggérées ont été ajoutées.':'All suggested clauses added.')+'</p>';
+}
+
+function addClause(k){
+  addedNudges[k]=true;
+  var cl=CL[k]; var name=L==='fr'?cl.fr:cl.en; var desc=L==='fr'?cl.df:cl.de;
+  var dm=document.getElementById('doc-main'); var disc=dm.querySelector('.doc-disc');
+  var html='<div class="doc-cl"><p style="font-size:12px;font-weight:700;margin-bottom:4px">'+name+'</p><p style="font-size:13px;color:var(--t2)">'+desc+' <em style="color:var(--t3)">[À compléter avec les parties]</em></p></div>';
+  if(disc)disc.insertAdjacentHTML('beforebegin',html); else dm.innerHTML+=html;
+  renderNudges();
+}
+
+function buildDoc(){
+  var cObj=CTS.find(function(c){return c.k===selC;});
+  var cName=cObj?(L==='fr'?cObj.fr:cObj.en):selC;
+  var qc=QC[selC]||QC.service; var det=document.getElementById('inp-det').value; var fr=L==='fr';
+  var qaHtml='';
+  for(var i=0;i<chatHistory.length;i++){
+    var msg=chatHistory[i];
+    if(msg.role==='user'&&i>0){
+      var prev=chatHistory[i-1];
+      var q=prev&&prev.role==='assistant'?prev.content.replace(/<[^>]+>/g,'').split('\n')[0].substring(0,140):'';
+      qaHtml+='<div class="doc-qa">'+(q?'<div class="doc-qa-q">'+q+'</div>':'')+'<div>'+msg.content+'</div></div>';
+    }
+  }
+  var html='';
+  html+='<div class="doc-wm">'+cName.toUpperCase()+' · PROJET · '+new Date().toLocaleDateString(fr?'fr-CA':'en-CA')+'</div>';
+  html+='<div class="doc-title">'+cName+'</div>';
+  html+='<div class="doc-meta">'+qc.jur+' · '+qc.law+'</div>';
+  html+='<hr class="doc-hr">';
+  if(det){html+='<div class="doc-sec">'+(fr?'Contexte fourni':'Provided context')+'</div><p style="margin-bottom:16px"><span class="doc-hl">'+det+'</span></p><hr class="doc-hr">';}
+  html+='<div class="doc-sec">1. '+(fr?'Informations collectées':'Collected information')+'</div>';
+  html+=qaHtml||'<p style="color:var(--t3);font-size:13px">[—]</p>';
+  html+='<hr class="doc-hr">';
+  html+='<div class="doc-sec">2. '+(fr?'Juridiction & droit applicable':'Jurisdiction & governing law')+'</div>';
+  html+='<p style="font-size:13px;margin-bottom:5px">'+qc.jur+'</p><p style="font-size:13px;margin-bottom:5px">'+qc.law+'</p>';
+  if(qc.labour)html+='<p style="font-size:13px;margin-bottom:5px">'+qc.labour+'</p>';
+  if(qc.pipeda)html+='<p style="font-size:13px;margin-bottom:5px">'+qc.pipeda+'</p>';
+  if(qc.consumer)html+='<p style="font-size:13px;margin-bottom:5px">'+qc.consumer+'</p>';
+  if(qc.note)html+='<div class="doc-qc">⚠ '+qc.note+'</div>';
+  html+='<hr class="doc-hr">';
+  html+='<div class="doc-sec">3. '+(fr?'Clauses principales':'Main clauses')+'</div>';
+  html+='<p style="font-size:13px;color:var(--t3);font-style:italic;margin-bottom:8px">'+(fr?'Ajoutez des clauses via le panneau de suggestions →':'Add clauses via the suggestions panel →')+'</p>';
+  html+='<hr class="doc-hr">';
+  html+='<div class="doc-sec">4. '+(fr?'Signatures':'Signatures')+'</div>';
+  html+='<div class="sig-grid"><div><div style="font-size:11px;color:var(--t3)">'+(fr?'Partie 1':'Party 1')+'</div><div class="sig-line">'+(fr?'Signature & date':'Signature & date')+'</div></div>';
+  html+='<div><div style="font-size:11px;color:var(--t3)">'+(fr?'Partie 2':'Party 2')+'</div><div class="sig-line">'+(fr?'Signature & date':'Signature & date')+'</div></div></div>';
+  html+='<div class="doc-disc">⚠ '+(fr?'Ce document est un projet structuré généré par IA. Il ne constitue pas un avis juridique. Faites-le réviser par un avocat qualifié avant toute signature.':'This document is a structured AI-generated draft. It does not constitute legal advice. Have it reviewed by a qualified lawyer before signing.')+'</div>';
+  document.getElementById('doc-main').innerHTML=html;
+  addedNudges={}; renderNudges(); goPanel(2);
+}
+
+function doTranslate(){L=L==='fr'?'en':'fr';applyLang();buildDoc();}
+
+function doExport(){
+  var c=document.getElementById('doc-main').innerText;
+  var b=new Blob([c],{type:'text/plain;charset=utf-8'});
+  var u=URL.createObjectURL(b); var a=document.createElement('a');
+  a.href=u; a.download='LexAI-'+new Date().toISOString().slice(0,10)+'.txt';
+  a.click(); URL.revokeObjectURL(u);
+}
+
+applyLang();
+</script>
+</body>
+</html>
